@@ -37,7 +37,7 @@ dev = [
 packages = ["python/evalpulse"]
 
 [tool.pytest.ini_options]
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers -p no:cacheprovider"
 pythonpath = ["python", "."]
 testpaths = ["tests"]
 
@@ -47,6 +47,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -54,3 +55,6 @@ strict = true
 plugins = ["pydantic.mypy"]
 packages = ["evalpulse"]
 
+[[tool.mypy.overrides]]
+module = ["celery", "celery.*", "jsonschema", "jsonschema.*"]
+ignore_missing_imports = true
