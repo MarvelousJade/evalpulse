@@ -17,6 +17,7 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   headers.delete("connection");
   headers.delete("content-length");
   headers.delete("host");
+  headers.set("accept-encoding", "identity");
 
   try {
     const upstream = await fetch(target, {
@@ -26,9 +27,14 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
       cache: "no-store",
       redirect: "manual",
     });
+    const responseHeaders = new Headers(upstream.headers);
+    responseHeaders.delete("connection");
+    responseHeaders.delete("content-encoding");
+    responseHeaders.delete("content-length");
+    responseHeaders.delete("transfer-encoding");
     return new Response(upstream.body, {
       status: upstream.status,
-      headers: upstream.headers,
+      headers: responseHeaders,
     });
   } catch {
     return Response.json({ detail: "API service unavailable" }, { status: 502 });
