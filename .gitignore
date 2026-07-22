@@ -15,6 +15,7 @@ node_modules/
 .next/
 playwright-report/
 test-results/
+*.tsbuildinfo
 .DS_Store
 .idea/
 .vscode/
