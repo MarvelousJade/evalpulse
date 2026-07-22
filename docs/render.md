@@ -12,7 +12,7 @@ The root `render.yaml` is a Render Blueprint for the first-release architecture:
 1. Push this repository to GitHub or GitLab.
 2. In the Render Dashboard, choose **New → Blueprint** and connect the repository.
 3. Review the four free resources from `render.yaml` and apply the Blueprint.
-4. Wait for the API pre-deploy migration and both service deploys to finish.
+4. Wait for the API startup migration and both service deploys to finish.
 5. Open the `evalpulse-web` URL and sign in with `demo@evalpulse.local` / `evalpulse-demo`.
 6. Run `python scripts/smoke.py https://<evalpulse-api-host>` to verify the deployed API and worker.
 

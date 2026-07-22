@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+alembic upgrade head
+
 celery -A evalpulse.tasks:celery_app worker \
   --beat \
   --schedule=/tmp/celerybeat-schedule \

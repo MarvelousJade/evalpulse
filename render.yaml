@@ -24,10 +24,8 @@ services:
     dockerContext: .
     dockerfilePath: ./services/api/Dockerfile
     dockerCommand: sh services/api/start-render.sh
-    preDeployCommand: alembic upgrade head
     healthCheckPath: /health/ready
     autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: ENVIRONMENT
         value: production
