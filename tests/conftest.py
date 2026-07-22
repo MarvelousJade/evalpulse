@@ -1,7 +1,7 @@
 import os
 
-os.environ["DATABASE_URL"] = "sqlite:///./test_evalpulse.db"
-os.environ["SESSION_SECRET"] = "test-secret-that-is-long-enough-for-tests"
+os.environ.setdefault("DATABASE_URL", "sqlite:///./test_evalpulse.db")
+os.environ.setdefault("SESSION_SECRET", "test-secret-that-is-long-enough-for-tests")
 
 import pytest
 from evalpulse.api import app

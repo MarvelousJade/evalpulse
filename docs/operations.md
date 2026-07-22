@@ -8,7 +8,7 @@ Copy `.env.example` to `.env`, set a long random `SESSION_SECRET`, then run:
 docker compose up --build
 ```
 
-The web app is on port 3000 and the API is on port 8000. PostgreSQL and Redis are bound only to loopback for optional debugging.
+The web app is on port 3000 and the API is on port 8000. PostgreSQL and Redis stay private to the Compose network. Set `WEB_PORT` or `API_PORT` if either public port is already occupied.
 
 ## Process-level development
 
@@ -28,4 +28,3 @@ npm run dev --workspace @evalpulse/web
 - A worker crash leaves a run retryable; duplicate task delivery is safe.
 - Cancellation is cooperative and is observed between provider calls.
 - `/health/live` reports process health. `/health/ready` also checks required dependencies.
-

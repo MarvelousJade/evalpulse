@@ -19,6 +19,12 @@ celery_app.conf.update(
     accept_content=["json"],
     result_serializer="json",
     worker_prefetch_multiplier=1,
+    beat_schedule={
+        "redispatch-pending-runs": {
+            "task": "evalpulse.dispatch_pending",
+            "schedule": 5.0,
+        }
+    },
 )
 
 
@@ -77,3 +83,8 @@ def dispatch_pending(limit: int = 100) -> int:
                 row.last_error = str(exc)[:500]
         db.commit()
     return dispatched
+
+
+@celery_app.task(name="evalpulse.dispatch_pending")  # type: ignore[untyped-decorator]
+def dispatch_pending_task() -> int:
+    return dispatch_pending()

@@ -7,7 +7,8 @@
   },
   "workspaces": [
     "apps/web",
-    "packages/api-client"
+    "packages/api-client",
+    "tests/e2e"
   ],
   "overrides": {
     "next": {

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evalpulse-config
+data:
+  ENVIRONMENT: production
+  COOKIE_SECURE: "true"
+  CORS_ORIGINS: https://evalpulse.example.com
+

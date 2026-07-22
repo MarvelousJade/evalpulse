@@ -1,0 +1,110 @@
+name: evalpulse
+
+x-python-environment: &python-environment
+  DATABASE_URL: postgresql+psycopg://evalpulse:evalpulse@postgres:5432/evalpulse
+  REDIS_URL: redis://redis:6379/0
+  SESSION_SECRET: ${SESSION_SECRET:-local-development-secret-change-before-sharing}
+  COOKIE_SECURE: "false"
+  CORS_ORIGINS: http://localhost:3000
+
+x-python-runtime: &python-runtime
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17.5-alpine
+    environment:
+      POSTGRES_DB: evalpulse
+      POSTGRES_USER: evalpulse
+      POSTGRES_PASSWORD: evalpulse
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evalpulse -d evalpulse"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.0-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    environment: *python-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  api:
+    <<: *python-runtime
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    environment: *python-environment
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    <<: *python-runtime
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    environment: *python-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  web:
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
