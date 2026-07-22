@@ -10,6 +10,8 @@ EvalPulse is a deterministic prompt-evaluation and regression-testing platform. 
 
 The API documentation is available at <http://localhost:8000/docs>. See [operations](docs/operations.md) for local commands and [verification](docs/verification.md) for the evidence behind project claims.
 
+For a hosted deployment, see the [Render Blueprint guide](docs/render.md).
+
 ## Repository map
 
 - `apps/web`: Next.js dashboard
@@ -26,4 +28,3 @@ The API documentation is available at <http://localhost:8000/docs>. See [operati
 - Workers are retry-safe and results are unique per run and test case.
 - The mock provider is deterministic and is the default in tests and demos.
 - Every comparison explains each regression threshold independently.
-
