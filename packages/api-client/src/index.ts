@@ -107,6 +107,26 @@ export class ApiError extends Error {
   }
 }
 
+const LOGIN_RETRY_DELAYS_MS = [
+  1_000,
+  2_000,
+  4_000,
+  8_000,
+  12_000,
+  15_000,
+  15_000,
+] as const;
+const TRANSIENT_SERVICE_STATUSES = new Set([502, 503, 504]);
+
+type RequestOptions = {
+  retryDelaysMs?: readonly number[];
+  unavailableMessage?: string;
+};
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 function csrfToken(): string | undefined {
   if (typeof document === "undefined") return undefined;
   return document.cookie
@@ -115,7 +135,11 @@ function csrfToken(): string | undefined {
     ?.split("=")[1];
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  options: RequestOptions = {},
+): Promise<T> {
   const method = init.method?.toUpperCase() ?? "GET";
   const headers = new Headers(init.headers);
   if (init.body) headers.set("Content-Type", "application/json");
@@ -123,13 +147,29 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const csrf = csrfToken();
     if (csrf) headers.set("X-CSRF-Token", decodeURIComponent(csrf));
   }
-  const response = await fetch(path, { ...init, headers, credentials: "include" });
+  let response: Response;
+  let attempt = 0;
+  while (true) {
+    response = await fetch(path, { ...init, headers, credentials: "include" });
+    const retryDelay = options.retryDelaysMs?.[attempt];
+    if (!TRANSIENT_SERVICE_STATUSES.has(response.status) || retryDelay === undefined) break;
+    await response.body?.cancel();
+    await delay(retryDelay);
+    attempt += 1;
+  }
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as {
       detail?: string;
       code?: string;
     };
-    throw new ApiError(payload.detail ?? "Request failed", response.status, payload.code);
+    const unavailableMessage = TRANSIENT_SERVICE_STATUSES.has(response.status)
+      ? options.unavailableMessage
+      : undefined;
+    throw new ApiError(
+      unavailableMessage ?? payload.detail ?? "Request failed",
+      response.status,
+      payload.code ?? (unavailableMessage ? "service_unavailable" : undefined),
+    );
   }
   return response.json() as Promise<T>;
 }
@@ -137,10 +177,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const api = {
   me: () => request<User>("/api/auth/me"),
   login: (email: string, password: string) =>
-    request<User>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+    request<User>(
+      "/api/auth/login",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      },
+      {
+        retryDelaysMs: LOGIN_RETRY_DELAYS_MS,
+        unavailableMessage: "The API is still waking up. Please wait a moment and try again.",
+      },
+    ),
   logout: () => request<{ message: string }>("/api/auth/logout", { method: "POST" }),
   projects: () => request<Project[]>("/api/projects"),
   createProject: (name: string, description: string) =>

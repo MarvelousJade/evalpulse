@@ -233,11 +233,11 @@ export default function Home() {
           <form className="auth-card" onSubmit={signIn}>
             <p className="eyebrow">Welcome back</p>
             <h2>Sign in to your workspace</h2>
-            <p className="muted">Demo credentials are pre-filled for the local environment.</p>
+            <p className="muted">Demo credentials are pre-filled. The free API can take up to a minute to wake.</p>
             <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
             <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label>
             {error && <div className="error" role="alert">{error}</div>}
-            <button className="primary wide" disabled={busy === "login"}>{busy === "login" ? "Signing in…" : "Sign in"}</button>
+            <button className="primary wide" disabled={busy === "login"}>{busy === "login" ? "Connecting…" : "Sign in"}</button>
           </form>
         </section>
       </main>
