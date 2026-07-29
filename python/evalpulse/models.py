@@ -211,6 +211,23 @@ class EvaluationScore(TimestampMixin, Base):
     result: Mapped[EvaluationResult] = relationship(back_populates="scores")
 
 
+class RunDiagnosis(TimestampMixin, Base):
+    __tablename__ = "run_diagnoses"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(
+        ForeignKey("evaluation_runs.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    provider: Mapped[str] = mapped_column(String(40))
+    model: Mapped[str] = mapped_column(String(120))
+    summary: Mapped[str] = mapped_column(Text)
+    findings: Mapped[list[str]] = mapped_column(JSON, default=list)
+    actions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    citations: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    usage: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
 class RegressionPolicy(TimestampMixin, Base):
     __tablename__ = "regression_policies"
 

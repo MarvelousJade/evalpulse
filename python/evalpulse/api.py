@@ -4,6 +4,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager, suppress
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
@@ -27,6 +28,7 @@ from .comparisons import compare_aggregates
 from .config import get_settings
 from .database import SessionLocal, get_db
 from .datasets import DatasetValidationError, parse_dataset
+from .diagnostics import NoFailedEvaluationsError, diagnose_failed_run
 from .models import (
     Comparison,
     Dataset,
@@ -37,18 +39,22 @@ from .models import (
     ProjectMember,
     Prompt,
     PromptVersion,
+    RunDiagnosis,
     RunDispatch,
     RunEvent,
     TestCase,
     User,
 )
+from .providers import PermanentProviderError, TemporaryProviderError
 from .schemas import (
+    AiStatusResponse,
     ComparisonCreate,
     ComparisonResponse,
     DatasetCreate,
     DatasetResponse,
     DatasetVersionCreate,
     DatasetVersionResponse,
+    DiagnosisResponse,
     LoginRequest,
     Message,
     ProjectCreate,
@@ -118,6 +124,17 @@ def authorize_project(db: Session, project_id: str, user: User) -> Project:
     return project
 
 
+def _gemini_requests_reserved_today(db: Session) -> int:
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    value = db.scalar(
+        select(func.sum(DatasetVersion.row_count))
+        .select_from(EvaluationRun)
+        .join(DatasetVersion, DatasetVersion.id == EvaluationRun.dataset_version_id)
+        .where(EvaluationRun.provider == "gemini", EvaluationRun.created_at >= today)
+    )
+    return int(value or 0)
+
+
 @app.post("/api/auth/login", response_model=UserResponse)
 def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> User:
     user = db.scalar(select(User).where(User.email == body.email.casefold()))
@@ -136,6 +153,18 @@ def logout(response: Response) -> Message:
 @app.get("/api/auth/me", response_model=UserResponse)
 def me(user: User = Depends(get_current_user)) -> User:
     return user
+
+
+@app.get("/api/ai/status", response_model=AiStatusResponse)
+def ai_status(_: User = Depends(get_current_user)) -> AiStatusResponse:
+    return AiStatusResponse(
+        enabled=settings.llm_configured,
+        provider="gemini",
+        model=settings.gemini_model,
+        max_cases_per_run=settings.llm_max_cases_per_run,
+        max_output_tokens=settings.llm_max_output_tokens,
+        daily_request_limit=settings.llm_daily_request_limit,
+    )
 
 
 @app.get("/api/projects", response_model=list[ProjectResponse])
@@ -357,6 +386,28 @@ def create_run(
         raise HTTPException(status_code=422, detail="Prompt version does not belong to project")
     if dataset_version is None or dataset_version.dataset.project_id != project_id:
         raise HTTPException(status_code=422, detail="Dataset version does not belong to project")
+    if body.provider == "gemini":
+        if not settings.llm_configured:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Gemini is disabled; set LLM_ENABLED=true and GEMINI_API_KEY on the server"
+                ),
+            )
+        if dataset_version.row_count > settings.llm_max_cases_per_run:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Gemini runs are limited to {settings.llm_max_cases_per_run} cases; "
+                    "split this dataset or use the mock provider"
+                ),
+            )
+        reserved = _gemini_requests_reserved_today(db)
+        if reserved + dataset_version.row_count > settings.llm_daily_request_limit:
+            raise HTTPException(
+                status_code=429,
+                detail="The server-side daily Gemini request allowance is exhausted",
+            )
     run = EvaluationRun(
         project_id=project_id,
         prompt_version_id=body.prompt_version_id,
@@ -420,6 +471,63 @@ def get_results(
             .order_by(EvaluationResult.created_at)
         )
     )
+
+
+@app.post(
+    "/api/runs/{run_id}/diagnose",
+    response_model=DiagnosisResponse,
+    dependencies=[Depends(require_csrf)],
+)
+def diagnose_run(
+    run_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> RunDiagnosis:
+    run = authorized_run(db, run_id, user)
+    existing = db.scalar(select(RunDiagnosis).where(RunDiagnosis.run_id == run_id))
+    if existing is not None:
+        return existing
+    if run.status not in {"completed", "failed"}:
+        raise HTTPException(status_code=409, detail="Only terminal runs can be diagnosed")
+    if not settings.llm_configured:
+        raise HTTPException(
+            status_code=503,
+            detail="AI diagnosis is disabled; configure the server-side Gemini integration",
+        )
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    diagnosis_count = (
+        db.scalar(select(func.count(RunDiagnosis.id)).where(RunDiagnosis.created_at >= today)) or 0
+    )
+    if diagnosis_count >= settings.llm_daily_diagnosis_limit:
+        raise HTTPException(status_code=429, detail="The daily AI diagnosis allowance is exhausted")
+    try:
+        draft = diagnose_failed_run(db, run_id, settings)
+    except NoFailedEvaluationsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except TemporaryProviderError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except PermanentProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    diagnosis = RunDiagnosis(
+        run_id=run_id,
+        provider=draft.provider,
+        model=draft.model,
+        summary=draft.summary,
+        findings=draft.findings,
+        actions=draft.actions,
+        citations=draft.citations,
+        evidence=draft.evidence,
+        usage=draft.usage,
+    )
+    db.add(diagnosis)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        duplicate = db.scalar(select(RunDiagnosis).where(RunDiagnosis.run_id == run_id))
+        if duplicate is None:
+            raise
+        return duplicate
+    db.refresh(diagnosis)
+    return diagnosis
 
 
 @app.post(

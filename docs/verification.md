@@ -16,12 +16,19 @@ kubectl kustomize infra/k8s/overlays/kind
 
 Measured counts and performance claims belong here only after the commands have run in a clean environment. The local Kubernetes overlay is a demonstration path and is not described as production infrastructure.
 
-## Verified baseline
+## Latest local test refresh
 
-Verified locally on July 21, 2026 with Python 3.12.10, Node 24.11.0, Docker 29.6.1, and kubectl/Kustomize 1.36.1:
+Verified locally on July 29, 2026 with Python 3.12.10 and Node 24.11.0:
 
-- 7 Python unit/integration tests passed with 81% statement coverage.
-- 2 typed API-client contract tests passed.
+- 16 Python unit/integration tests passed with 80% statement coverage across 1,380 statements.
+- 5 typed API-client contract tests passed.
+
+The browser test requires a running web/API stack and was not included in this local refresh.
+
+## Full-stack baseline
+
+Verified locally on July 21, 2026 with Docker 29.6.1 and kubectl/Kustomize 1.36.1:
+
 - 1 Playwright browser workflow passed against the Compose stack.
 - Ruff, strict mypy, ESLint, TypeScript, and the optimized Next.js build passed.
 - `npm audit --audit-level=moderate` reported zero known vulnerabilities.

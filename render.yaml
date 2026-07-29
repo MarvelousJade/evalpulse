@@ -44,6 +44,12 @@ services:
         value: "true"
       - key: CORS_ORIGINS
         value: ""
+      - key: LLM_ENABLED
+        value: "false"
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_API_KEY
+        sync: false
 
   - type: web
     name: evalpulse-web

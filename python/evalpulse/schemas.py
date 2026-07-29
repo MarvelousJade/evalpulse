@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ApiModel(BaseModel):
@@ -115,9 +115,17 @@ class EvaluatorSpec(ApiModel):
 class RunCreate(ApiModel):
     prompt_version_id: str
     dataset_version_id: str
-    provider: Literal["mock"] = "mock"
+    provider: Literal["mock", "gemini"] = "mock"
     provider_config: dict[str, Any] = Field(default_factory=dict)
     evaluators: list[EvaluatorSpec] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_provider_config(self) -> RunCreate:
+        if self.provider != "gemini":
+            return self
+        if self.provider_config:
+            raise ValueError("Gemini provider_config is server-controlled and must be empty")
+        return self
 
 
 class RunResponse(ApiModel):
@@ -154,6 +162,37 @@ class ResultResponse(ApiModel):
     error_type: str | None
     error_message: str | None
     scores: list[ScoreResponse]
+
+
+class AiStatusResponse(ApiModel):
+    enabled: bool
+    provider: str
+    model: str
+    max_cases_per_run: int
+    max_output_tokens: int
+    daily_request_limit: int
+
+
+class CitationResponse(ApiModel):
+    id: str
+    path: str
+    heading: str
+    excerpt: str
+    score: float
+
+
+class DiagnosisResponse(ApiModel):
+    id: str
+    run_id: str
+    provider: str
+    model: str
+    summary: str
+    findings: list[str]
+    actions: list[str]
+    citations: list[CitationResponse]
+    evidence: dict[str, Any]
+    usage: dict[str, Any]
+    created_at: datetime
 
 
 class ComparisonCreate(ApiModel):

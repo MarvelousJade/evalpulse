@@ -22,6 +22,19 @@ celery -A services.worker.main.celery_app worker --loglevel=INFO
 npm run dev --workspace @evalpulse/web
 ```
 
+## Optional live AI
+
+Set `LLM_ENABLED=true` and `GEMINI_API_KEY` in `.env` before starting the API and worker. Confirm the
+connection without exposing the key with `GET /api/ai/status`, or run the end-to-end demo:
+
+```shell
+python scripts/demo_ai.py http://localhost:8000
+```
+
+Keep the key restricted to the Gemini API and deployment egress IP. Configure a provider-side billing
+budget and alert as the final cost boundary; the in-app daily allowance is defense in depth, not a
+replacement for an account-level cap.
+
 ## Failure recovery
 
 - If Redis restarts, completed data remains in PostgreSQL. Re-submit undispatched rows with the dispatcher command.

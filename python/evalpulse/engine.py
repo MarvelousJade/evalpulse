@@ -65,7 +65,11 @@ def execute_run(
         _fail_run(db, run, "Run references missing immutable input")
         return "failed"
 
-    provider = get_provider(run.provider)
+    try:
+        provider = get_provider(run.provider)
+    except PermanentProviderError as exc:
+        _fail_run(db, run, str(exc))
+        return "failed"
     total = len(dataset_version.cases)
     try:
         for completed, case in enumerate(dataset_version.cases):

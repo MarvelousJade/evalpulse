@@ -97,6 +97,35 @@ export type Comparison = {
   created_at: string;
 };
 
+export type AiStatus = {
+  enabled: boolean;
+  provider: "gemini";
+  model: string;
+  max_cases_per_run: number;
+  max_output_tokens: number;
+  daily_request_limit: number;
+};
+
+export type Diagnosis = {
+  id: string;
+  run_id: string;
+  provider: string;
+  model: string;
+  summary: string;
+  findings: string[];
+  actions: string[];
+  citations: Array<{
+    id: string;
+    path: string;
+    heading: string;
+    excerpt: string;
+    score: number;
+  }>;
+  evidence: Record<string, unknown>;
+  usage: { calls?: number; input_tokens?: number; output_tokens?: number };
+  created_at: string;
+};
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -221,6 +250,7 @@ export const api = {
     datasetVersionId: string,
     idempotencyKey: string,
     evaluators: EvaluatorSpec[],
+    provider: "mock" | "gemini" = "mock",
   ) =>
     request<Run>(`/api/projects/${projectId}/runs`, {
       method: "POST",
@@ -228,12 +258,15 @@ export const api = {
       body: JSON.stringify({
         prompt_version_id: promptVersionId,
         dataset_version_id: datasetVersionId,
-        provider: "mock",
+        provider,
         provider_config: {},
         evaluators,
       }),
     }),
   run: (runId: string) => request<Run>(`/api/runs/${runId}`),
+  aiStatus: () => request<AiStatus>("/api/ai/status"),
+  diagnose: (runId: string) =>
+    request<Diagnosis>(`/api/runs/${runId}/diagnose`, { method: "POST" }),
   cancelRun: (runId: string) => request<Run>(`/api/runs/${runId}/cancel`, { method: "POST" }),
   compare: (projectId: string, baselineRunId: string, candidateRunId: string) =>
     request<Comparison>(`/api/projects/${projectId}/comparisons`, {
@@ -241,4 +274,3 @@ export const api = {
       body: JSON.stringify({ baseline_run_id: baselineRunId, candidate_run_id: candidateRunId }),
     }),
 };
-

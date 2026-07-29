@@ -2,57 +2,34 @@
 
 from __future__ import annotations
 
-import http.cookiejar
 import json
 import sys
 import time
-import urllib.error
-import urllib.request
 import uuid
 from typing import Any
 
+from http_client import EvalPulseHttpClient
+
 BASE_URL = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://localhost:8000"
-cookies = http.cookiejar.CookieJar()
-opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookies))
+client = EvalPulseHttpClient(BASE_URL, timeout_seconds=10)
 
 
-def call(
-    path: str, method: str = "GET", payload: dict[str, Any] | None = None, **headers: str
-) -> Any:
-    body = json.dumps(payload).encode() if payload is not None else None
-    request_headers = {"Content-Type": "application/json", **headers}
-    request = urllib.request.Request(BASE_URL + path, body, request_headers, method=method)
-    try:
-        with opener.open(request, timeout=10) as response:
-            return json.load(response)
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"{method} {path} failed: {exc.code} {exc.read().decode()}") from exc
-
-
-def csrf() -> str:
-    return next(cookie.value for cookie in cookies if cookie.name == "evalpulse_csrf")
-
-
-def post(path: str, payload: dict[str, Any], **headers: str) -> Any:
-    return call(path, "POST", payload, **{"X-CSRF-Token": csrf(), **headers})
-
-
-call(
+client.request(
     "/api/auth/login",
     "POST",
     {"email": "demo@evalpulse.local", "password": "evalpulse-demo"},
 )
-project = post("/api/projects", {"name": f"Smoke {uuid.uuid4().hex[:8]}"})
-prompt = post(
+project = client.post("/api/projects", {"name": f"Smoke {uuid.uuid4().hex[:8]}"})
+prompt = client.post(
     f"/api/projects/{project['id']}/prompts",
     {"name": "Smoke prompt", "text": "Return response", "variables": []},
 )
-candidate = post(
+candidate = client.post(
     f"/api/prompts/{prompt['id']}/versions",
     {"text": "[lowercase] Return response", "variables": []},
 )
-dataset = post(f"/api/projects/{project['id']}/datasets", {"name": "Smoke data"})
-dataset_version = post(
+dataset = client.post(f"/api/projects/{project['id']}/datasets", {"name": "Smoke data"})
+dataset_version = client.post(
     f"/api/datasets/{dataset['id']}/versions",
     {
         "format": "json",
@@ -64,7 +41,7 @@ dataset_version = post(
 
 
 def queue(version_id: str, label: str) -> dict[str, Any]:
-    return post(
+    return client.post(
         f"/api/projects/{project['id']}/runs",
         {
             "prompt_version_id": version_id,
@@ -81,15 +58,15 @@ baseline = queue(prompt["versions"][0]["id"], "baseline")
 candidate_run = queue(candidate["id"], "candidate")
 deadline = time.monotonic() + 45
 while time.monotonic() < deadline:
-    baseline = call(f"/api/runs/{baseline['id']}")
-    candidate_run = call(f"/api/runs/{candidate_run['id']}")
+    baseline = client.request(f"/api/runs/{baseline['id']}")
+    candidate_run = client.request(f"/api/runs/{candidate_run['id']}")
     if baseline["status"] == candidate_run["status"] == "completed":
         break
     time.sleep(0.5)
 else:
     raise RuntimeError(f"Runs did not complete: {baseline['status']}, {candidate_run['status']}")
 
-comparison = post(
+comparison = client.post(
     f"/api/projects/{project['id']}/comparisons",
     {"baseline_run_id": baseline["id"], "candidate_run_id": candidate_run["id"]},
 )

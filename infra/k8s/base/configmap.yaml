@@ -7,4 +7,5 @@ data:
   COOKIE_SECURE: "false"
   CORS_ORIGINS: http://localhost:3000
   API_INTERNAL_URL: http://api:8000
-
+  LLM_ENABLED: "false"
+  GEMINI_MODEL: gemini-3.5-flash-lite

@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  AiStatus,
   ApiError,
   Comparison,
   DatasetVersion,
+  Diagnosis,
   Project,
   PromptVersion,
   Run,
@@ -79,6 +81,9 @@ export default function Home() {
   const [baselineRun, setBaselineRun] = useState<Run | null>(null);
   const [candidateRun, setCandidateRun] = useState<Run | null>(null);
   const [comparison, setComparison] = useState<Comparison | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
+  const [provider, setProvider] = useState<"mock" | "gemini">("mock");
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const baselineRunId = baselineRun?.id;
@@ -102,6 +107,10 @@ export default function Home() {
   useEffect(() => {
     api.me().then(setUser).catch(() => undefined).finally(() => setLoadingSession(false));
   }, []);
+
+  useEffect(() => {
+    if (user) api.aiStatus().then(setAiStatus).catch(() => undefined);
+  }, [user]);
 
   const refreshRuns = useCallback(async () => {
     const [baseline, candidate] = await Promise.all([
@@ -197,8 +206,8 @@ export default function Home() {
       const evaluators = [{ type: "exact_match" as const, options: {} }];
       const nonce = crypto.randomUUID();
       const [baseline, candidate] = await Promise.all([
-        api.createRun(project.id, baselineVersion.id, datasetVersion.id, `baseline-${nonce}`, evaluators),
-        api.createRun(project.id, candidateVersion.id, datasetVersion.id, `candidate-${nonce}`, evaluators),
+        api.createRun(project.id, baselineVersion.id, datasetVersion.id, `baseline-${nonce}`, evaluators, provider),
+        api.createRun(project.id, candidateVersion.id, datasetVersion.id, `candidate-${nonce}`, evaluators, provider),
       ]);
       setBaselineRun(baseline);
       setCandidateRun(candidate);
@@ -211,6 +220,11 @@ export default function Home() {
       await refreshRuns();
       setComparison(await api.compare(project.id, baselineRun.id, candidateRun.id));
     });
+  }
+
+  function diagnoseCandidate() {
+    if (!candidateRun) return;
+    void act("diagnosis", async () => setDiagnosis(await api.diagnose(candidateRun.id)));
   }
 
   if (loadingSession) {
@@ -227,7 +241,7 @@ export default function Home() {
             <h1>Ship prompt changes with evidence, not instinct.</h1>
             <p className="lede">Run reproducible evaluations, catch quality regressions, and explain every release decision.</p>
           </div>
-          <div className="proof-row"><span>Deterministic</span><span>Auditable</span><span>Provider-free</span></div>
+          <div className="proof-row"><span>Deterministic</span><span>Auditable</span><span>Budget-guarded</span></div>
         </section>
         <section className="login-panel">
           <form className="auth-card" onSubmit={signIn}>
@@ -252,7 +266,7 @@ export default function Home() {
         <div className="sidebar-foot"><span className="avatar">{user.display_name.slice(0, 2).toUpperCase()}</span><div><strong>{user.display_name}</strong><small>{user.email}</small></div></div>
       </aside>
       <section className="workspace" id="workspace">
-        <header className="topbar"><div><p className="eyebrow">Evaluation lab</p><h1>Release confidence</h1></div><div className="live-pill"><span /> Mock provider ready</div></header>
+        <header className="topbar"><div><p className="eyebrow">Evaluation lab</p><h1>Release confidence</h1></div><div className="live-pill"><span /> {aiStatus?.enabled ? `${aiStatus.model} ready` : "Mock provider ready"}</div></header>
         {error && <div className="error banner" role="alert"><strong>Couldn’t complete that step.</strong> {error}<button onClick={() => setError(null)} aria-label="Dismiss error">×</button></div>}
         <div className="stepper" aria-label="Workflow progress">
           {["Project", "Prompts", "Dataset", "Evaluate", "Compare"].map((label, index) => <div key={label} className={currentStep >= index + 1 ? "step current" : "step"}><span>{index + 1}</span>{label}</div>)}
@@ -282,13 +296,16 @@ export default function Home() {
         </section>
 
         <section className="section-block" id="runs">
-          <div className="section-heading"><div><p className="eyebrow">Step 4</p><h2>Evaluate both versions</h2><p className="muted">Workers persist every case result before publishing live progress.</p></div><button className="primary" onClick={startRuns} disabled={!datasetVersion || Boolean(baselineRun) || busy === "runs"}>{busy === "runs" ? "Queueing…" : baselineRun ? "Runs queued" : "Run evaluations"}</button></div>
+          <div className="section-heading"><div><p className="eyebrow">Step 4</p><h2>Evaluate both versions</h2><p className="muted">Workers persist every case result before publishing live progress.</p></div><div className="run-actions"><label className="provider-picker">Provider<select value={provider} onChange={(event) => setProvider(event.target.value as "mock" | "gemini")} disabled={Boolean(baselineRun)}><option value="mock">Mock · free</option><option value="gemini" disabled={!aiStatus?.enabled}>Gemini Flash-Lite{aiStatus?.enabled ? "" : " · not configured"}</option></select></label><button className="primary" onClick={startRuns} disabled={!datasetVersion || Boolean(baselineRun) || busy === "runs"}>{busy === "runs" ? "Queueing…" : baselineRun ? "Runs queued" : "Run evaluations"}</button></div></div>
+          {provider === "gemini" && aiStatus && <p className="cost-note">Server guard: at most {aiStatus.max_cases_per_run} cases per run and {aiStatus.max_output_tokens} output tokens per call. The API key never reaches this browser.</p>}
           <div className="grid two"><RunCard label="Baseline · v1" run={baselineRun} /><RunCard label="Candidate · v2" run={candidateRun} /></div>
         </section>
 
         <section className="section-block" id="comparison">
           <div className="section-heading"><div><p className="eyebrow">Step 5</p><h2>Regression decision</h2><p className="muted">Every policy is evaluated independently against the candidate.</p></div><button className="primary" onClick={compareRuns} disabled={!completed || Boolean(comparison) || busy === "comparison"}>{busy === "comparison" ? "Comparing…" : comparison ? "Report generated" : "Compare runs"}</button></div>
           {!comparison ? <div className="empty-report"><span className="report-icon">↗</span><h3>{completed ? "Runs are ready to compare" : "Waiting for completed runs"}</h3><p>The report will show exact measurements and thresholds for every release gate.</p></div> : <div className={`decision ${comparison.passed ? "pass" : "fail"}`}><div className="decision-head"><div><p className="eyebrow">Release decision</p><h3>{comparison.passed ? "Candidate passed" : "Regression detected"}</h3></div><span>{comparison.passed ? "PASS" : "FAIL"}</span></div><div className="checks">{comparison.checks.map((check) => <div className="check-row" key={check.name}><span className={check.passed ? "check-dot pass" : "check-dot fail"}>{check.passed ? "✓" : "!"}</span><div><strong>{check.name.replaceAll("_", " ")}</strong><p>{check.explanation}</p></div><b>{check.passed ? "Passed" : "Failed"}</b></div>)}</div></div>}
+          {comparison && !comparison.passed && !diagnosis && <div className="diagnosis-cta"><div><p className="eyebrow">Agentic triage</p><h3>Diagnose the failed candidate</h3><p>The read-only agent inspects failed cases, retrieves runbook guidance, and returns cited actions.</p></div><button className="secondary" onClick={diagnoseCandidate} disabled={!aiStatus?.enabled || busy === "diagnosis"}>{busy === "diagnosis" ? "Diagnosing…" : aiStatus?.enabled ? "Run diagnosis" : "Gemini not configured"}</button></div>}
+          {diagnosis && <article className="diagnosis"><div className="row split"><div><p className="eyebrow">Cited AI diagnosis</p><h3>{diagnosis.summary}</h3></div><span className="status completed">{diagnosis.model}</span></div><div className="grid two"><div><h4>Findings</h4><ul>{diagnosis.findings.map((item) => <li key={item}>{item}</li>)}</ul></div><div><h4>Recommended actions</h4><ol>{diagnosis.actions.map((item) => <li key={item}>{item}</li>)}</ol></div></div><div className="citation-list"><h4>Retrieved sources</h4>{diagnosis.citations.map((citation) => <details key={citation.id}><summary>[{citation.id}] {citation.heading}</summary><p>{citation.excerpt}</p><code>{citation.path}</code></details>)}</div><p className="hint">Read-only advisory · {diagnosis.usage.calls ?? 0} model calls · {(diagnosis.usage.input_tokens ?? 0) + (diagnosis.usage.output_tokens ?? 0)} tokens</p></article>}
         </section>
       </section>
     </main>
