@@ -8,6 +8,8 @@
 **/node_modules
 **/.next
 *.db
+*.bak
+*.dump
 *.tsbuildinfo
 playwright-report
 test-results

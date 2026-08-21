@@ -2,6 +2,7 @@ name: evalpulse
 
 x-python-environment: &python-environment
   DATABASE_URL: postgresql+psycopg://evalpulse:evalpulse@postgres:5432/evalpulse
+  MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:-}
   REDIS_URL: redis://redis:6379/0
   SESSION_SECRET: ${SESSION_SECRET:-local-development-secret-change-before-sharing}
   COOKIE_SECURE: "false"

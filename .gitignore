@@ -12,6 +12,8 @@ htmlcov/
 dist/
 *.egg-info/
 *.db
+*.bak
+*.dump
 node_modules/
 .next/
 playwright-report/
@@ -20,3 +22,4 @@ test-results/
 .DS_Store
 .idea/
 .vscode/
+.neon

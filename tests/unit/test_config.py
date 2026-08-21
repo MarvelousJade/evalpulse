@@ -4,9 +4,22 @@ from evalpulse.schemas import RunCreate
 from pydantic import ValidationError
 
 
-def test_render_postgres_url_selects_psycopg_driver() -> None:
-    settings = Settings(database_url="postgresql://user:password@database/evalpulse")
-    assert settings.database_url == "postgresql+psycopg://user:password@database/evalpulse"
+def test_postgres_urls_select_psycopg_driver() -> None:
+    settings = Settings(
+        database_url="postgresql://user:password@database-pooler/evalpulse",
+        migration_database_url="postgres://user:password@database/evalpulse",
+    )
+
+    assert settings.database_url == ("postgresql+psycopg://user:password@database-pooler/evalpulse")
+    assert settings.alembic_database_url == (
+        "postgresql+psycopg://user:password@database/evalpulse"
+    )
+
+
+def test_migrations_fall_back_to_application_database_url() -> None:
+    settings = Settings(database_url="sqlite:///./test.db")
+
+    assert settings.alembic_database_url == settings.database_url
 
 
 def test_live_model_is_server_allow_listed() -> None:

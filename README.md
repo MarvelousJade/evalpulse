@@ -9,8 +9,8 @@ runs, regression policies, and a read-only RAG agent that diagnoses failed evalu
 [Operations guide](docs/operations.md) ·
 [Verification notes](docs/verification.md)
 
-> The deployment uses Render's free tier and may need a short cold start. Demo login:
-> `demo@evalpulse.local` / `evalpulse-demo`.
+> The deployment uses Render's free compute tier with Neon PostgreSQL and may need a short cold
+> start. Demo login: `demo@evalpulse.local` / `evalpulse-demo`.
 
 ![EvalPulse regression report and cited RAG diagnosis](docs/images/evalpulse-rag-diagnosis.png)
 
@@ -47,7 +47,7 @@ container baseline is recorded in [verification notes](docs/verification.md).
 flowchart LR
   Browser --> Web[Next.js dashboard]
   Web --> API[FastAPI API]
-  API --> DB[(PostgreSQL)]
+  API --> DB[(Neon PostgreSQL)]
   API --> Queue[(Redis / Celery)]
   Queue --> Worker[Evaluation worker]
   Worker --> DB
@@ -187,7 +187,7 @@ caching. Playwright covers the complete reviewer workflow.
 - `migrations`: Alembic schema history
 - `tests`: Python integration/unit tests and Playwright end-to-end coverage
 - `infra/k8s`: Kustomize base and local/production overlays
-- `render.yaml`: hosted Render Blueprint
+- `render.yaml`: hosted Render Blueprint with external Neon PostgreSQL
 
 ## Security and cost boundaries
 

@@ -1,12 +1,3 @@
-databases:
-  - name: evalpulse-db
-    plan: free
-    region: ohio
-    postgresMajorVersion: "17"
-    databaseName: evalpulse
-    user: evalpulse
-    ipAllowList: []
-
 services:
   - type: keyvalue
     name: evalpulse-queue
@@ -30,9 +21,9 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: evalpulse-db
-          property: connectionString
+        sync: false
+      - key: MIGRATION_DATABASE_URL
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue

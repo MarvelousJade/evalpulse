@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "EvalPulse"
     environment: str = "development"
     database_url: str = "sqlite:///./evalpulse.db"
+    migration_database_url: str | None = None
     redis_url: str = "redis://localhost:6379/0"
     session_secret: str = "development-only-change-me-please"
     cookie_secure: bool = False
@@ -32,9 +33,11 @@ class Settings(BaseSettings):
     rag_top_k: int = 3
     rag_knowledge_dir: str = "docs/knowledge"
 
-    @field_validator("database_url")
+    @field_validator("database_url", "migration_database_url")
     @classmethod
-    def select_psycopg_driver(cls, value: str) -> str:
+    def select_psycopg_driver(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         if value.startswith("postgresql://"):
             return value.replace("postgresql://", "postgresql+psycopg://", 1)
         if value.startswith("postgres://"):
@@ -50,6 +53,10 @@ class Settings(BaseSettings):
         if value not in allowed:
             raise ValueError(f"gemini_model must be one of: {', '.join(sorted(allowed))}")
         return value
+
+    @property
+    def alembic_database_url(self) -> str:
+        return self.migration_database_url or self.database_url
 
     @property
     def llm_configured(self) -> bool:
