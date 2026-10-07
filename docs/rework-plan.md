@@ -52,7 +52,7 @@ Static inspection found that `tests/conftest.py` retains inherited `DATABASE_URL
 
 The safe-storage increment is committed as `902813e`. Python verification passed 21 tests at 80% coverage, Ruff, and application/changed-test typing. The dependency increment is committed as `801d4d2`: clean installation, six audit-policy tests, the production audit without exceptions, workspace lint and typing, five client tests, and the build passed.
 
-The full audit still fails for five development package records propagated through unpatched `braces`. Docker Desktop's selected Linux daemon is unavailable, so container, PostgreSQL/Redis, live HTTP smoke, and browser checks remain unverified. Start the local daemon before attempting those checks; use disposable local storage and do not delete existing volumes.
+The full audit still fails for five development package records propagated through unpatched `braces`. An authorized Docker Desktop restart restored a Linux engine response, but isolated builds failed with storage I/O errors and read-only BuildKit metadata. Host C: has zero free bytes; Docker's snapshot storage inspection also failed. Container, PostgreSQL/Redis, live HTTP smoke, and browser checks remain unverified. Free host storage before retrying; use disposable local application storage and do not delete existing volumes or reset Docker without separate authorization.
 
 The full working baseline is not yet accepted. Do not introduce learning-branch defects or describe the entire rework as complete while runtime checks remain blocked. Reliability findings from static review require focused reproduction before selecting further code fixes. Main-branch integration and pushes remain unauthorized.
 

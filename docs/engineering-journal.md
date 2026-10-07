@@ -286,6 +286,31 @@ Retries combine delivery scheduling with durable execution ownership. Rolling ba
 
 The two pre-fix reproductions failed at the expected state assertion. Post-fix verification passed on Windows/Python 3.12.10: Ruff lint, Ruff format check (35 files), strict mypy across 16 application/changed-test source files, all 9 focused retry tests, and the full suite (34 tests, 82% statement coverage across 1,401 statements, 191.06 seconds). Checkpoints and score IDs, original start time, cancellation intent, the task-chain retry budget, duplicate active delivery, and terminal/unreleased states passed their assertions. One Starlette/httpx deprecation warning remains. No live-broker, worker-kill, or PostgreSQL concurrency check ran. This is existing behavior reproduced during ordinary development, not an intentionally introduced defect or a production incident.
 
+## Authorized Docker restart and full-stack verification
+
+### Runtime recovery
+
+The user explicitly authorized a Docker Desktop restart. `docker desktop restart` completed, then `docker info --format "Server={{.ServerVersion}} OSType={{.OSType}}"` returned `Server=29.6.1 OSType=linux`. This resolves the engine-readiness blocker; it does not itself verify application containers.
+
+No containers or volumes were deleted. Full-stack verification uses a separate `evalpulse-rework` Compose project, web/API ports 13000/18000, the documented placeholder environment, an explicit local migration URL, and disabled live inference. Real `.env` contents are not used for this stack.
+
+### Build-context hurdle
+
+Before building, inspection found that `.dockerignore` excluded source-control and dependency directories but not environment files or local task/cloud metadata. Targeted Dockerfile COPY instructions reduce image exposure, but do not justify sending private files to the builder.
+
+Added recursive `.env*` exclusions while retaining documented `.env.example` files, plus `.pi` and `.neon` exclusions. This is preventive hardening; no credential exposure, tracking, or compromise is established by the finding.
+
+### Verification and tradeoffs
+
+The isolated application build/start failed. Python package installation reported `OSError: [Errno 5] Input/output error`, and both Python and web build steps failed writing `/var/lib/docker/buildkit/containerd-overlayfs/metadata_v2.db` with `read-only file system`. The engine's successful version response did not establish writable build storage. Full-stack application startup and browser checks were not verified; further builds are paused rather than forcing writes or resetting storage. The BuildKit bind-mounted context probe executed all exclusion assertions successfully: real environment files and local metadata were absent while the example environment was present. The probe did not copy the context into an image layer. Image export then failed with `commit failed: input/output error`, so the overall probe build failed and no completed image artifact is claimed. Read-only capacity inspection reported C: free space = 0 bytes and G: free space = 101,397,356,544 bytes. `docker system df` also failed while reading snapshot storage with an input/output error. Disk exhaustion is a likely contributor, not proof that Docker's filesystem is otherwise healthy. Free host space before another build; any reset, destructive cleanup, or data relocation needs separate authorization and backups. No pruning, volume deletion, or Docker reset is authorized or performed. Recursive exclusion is deliberately conservative; runtime configuration belongs in environment injection rather than baked-in files. No meaningful functionality tradeoff is intended.
+
+### References and provenance
+
+- `.dockerignore`, `compose.yaml`, and the three application Dockerfiles.
+- Probe artifact: `.pi/verification/Dockerfile.context-probe` (uncommitted local verification support).
+
+The Docker startup hurdle was an observed local environment issue, not an application or production incident. Full-stack and learning-exercise results will be recorded only after they run.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.

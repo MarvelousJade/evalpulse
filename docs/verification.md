@@ -61,6 +61,12 @@ On Windows/Python 3.12.10, the comparison guards passed Ruff lint, Ruff formatti
 
 On Windows/Python 3.12.10, Ruff lint/formatting (35 files), strict mypy across 16 application/changed-test files, and all 9 focused retry tests passed. The full coverage run passed 34 tests at 82% across 1,401 statements in 191.06 seconds. The two pre-fix regressions left runs running after temporary errors; the corrected path releases them for retry and preserves checkpoints. Task-chain exhaustion, duplicate active delivery, cancellation, start time, and terminal/unreleased states passed. Tests use direct engine execution and eager Celery request contexts without a broker; live delivery, worker-loss recovery, and PostgreSQL concurrency remain unverified. The Starlette/httpx warning remains.
 
+## Authorized Docker restart and build attempt
+
+`docker desktop restart` completed and the subsequent engine query returned `Server=29.6.1 OSType=linux`. The separate `evalpulse-rework` build used placeholder configuration, local migration storage, mock inference, and ports 13000/18000. It failed during package installation and BuildKit metadata writes with input/output and read-only-filesystem errors; no successful application startup or browser verification is claimed.
+
+A BuildKit bind-mounted context probe executed the environment/metadata exclusion assertions successfully, but its image export failed with an I/O error. Context checks executed; the overall probe build did not pass and no completed probe image is claimed. Host storage inspection reported zero free bytes on C:, and `docker system df` failed reading snapshot storage. Free host space before retrying; no pruning, volume deletion, data relocation, or reset was performed.
+
 ## Latest local test refresh
 
 Verified locally on July 29, 2026 with Python 3.12.10 and Node 24.11.0:
