@@ -4,7 +4,13 @@
 
 > One critical case still matches exactly, while two ordinary cases fail after a candidate lowercases their outputs. The overall score is one out of three, but the critical policy reports a failure even though the critical case passed.
 
-This is an intentionally introduced local defect, not a production incident. The faulty checkpoint is pending verification; the starting correct baseline is `7d26f9b`.
+This is an intentionally introduced local defect, not a production incident. Faulty checkpoint: `learning/01-faulty`. Starting correct baseline: `7d26f9b`; verified scenario controls: `001c483`.
+
+Create a separate worktree from the repository root (use unused directory/branch names):
+
+```shell
+git worktree add -b study/case-01 "../evalpulse-case-01" learning/01-faulty
+```
 
 ## Reproduce
 

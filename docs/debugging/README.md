@@ -13,6 +13,6 @@ Two isolated investigations will have separate faulty checkpoints and fixes on `
 
 Do not build or deploy faulty checkpoints, point them at application databases, expose them to other users, or treat them as release candidates. The existing Docker stack remains the correct baseline while these investigations run.
 
-Checkpoint references will be filled in after their failures are verified. Solutions and progressive hints will be kept separate; ask for a hint if you want one without the full diagnosis.
+Case 01's preserved faulty reference is `learning/01-faulty`; case 02's reference will be filled in after its failure is verified. Solutions and progressive hints will be kept separate; ask for a hint if you want one without the full diagnosis.
 
 Implementation fixes and integration proceed independently of your study progress. The final learning branch will be corrected and tested before a merge commit into `shaoyu/rework`; the faulty history remains available for study.
