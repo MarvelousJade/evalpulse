@@ -408,6 +408,12 @@ Before introducing either fault, verify all four new parameterized cases against
 
 **Intentional change and hypothesis:** reused the full result population as the divisor for the critical score in `calculate_aggregate`. The expected semantic failure is a diluted critical pass rate despite the critical case passing. This models a plausible aggregate-refactoring mistake, not an arbitrary crash or an observed incident. Ruff formatting/lint (38 files) and strict application typing (15 files) passed, but the focused regression produced the intended result: one failure and one passing negative control in 5.11 seconds. The passing-critical case stored `critical_pass_rate=0.3333333333333333` rather than `1.0`, while its overall `1/3` score was correct. The zero-critical-pass control still passed. Preserve the faulty checkpoint as `learning/01-faulty`; this failure is intentional and is not a release-quality checkpoint. The running Docker stack continues using the correct baseline image.
 
+### Case 01 correction and evidence boundaries
+
+Faulty checkpoint `79e46e9` is preserved by `learning/01-faulty`. The first incorrect value is the persisted aggregate, before policy evaluation: the numerator counts critical successes but the faulty divisor counts all results. Restored the divisor to the critical result population, preserving the empty-critical fallback and overall score. This restores behavior already present in the implementation branch, not a defect that affected its working tree.
+
+The diagnosis, progressive hints, tradeoffs, and lesson are separate from learner instructions in `docs/debugging/solutions/01-critical-policy.md`. Fresh verification passed: both focused cases (7.51 seconds), all 40 SQLite tests at 82% coverage across 1,401 statements (146.39 seconds), Ruff lint/formatting (38 files), and strict mypy (18 application/test/helper files). The known Starlette/httpx warning remained. Preserve the separate correction as `learning/01-fixed`; fresh PostgreSQL/full-stack checks are still required for the final merged state. No dependency, schema, or policy change was needed. No production impact or performance improvement is claimed.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.

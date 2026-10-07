@@ -191,7 +191,9 @@ def calculate_aggregate(
         "passed": passed,
         "failed": len(results) - passed,
         "pass_rate": passed / total if total else 0,
-        "critical_pass_rate": (critical_passed / len(results) if critical_results else 1.0),
+        "critical_pass_rate": (
+            critical_passed / len(critical_results) if critical_results else 1.0
+        ),
         "p95_latency_ms": latencies[p95_index] if latencies else 0,
         "provider_error_rate": errors / total if total else 0,
         "input_tokens": sum(result.input_tokens for result in results),
