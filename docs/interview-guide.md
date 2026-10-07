@@ -4,7 +4,7 @@
 
 **One sentence:** EvalPulse evaluates versioned prompts against a shared dataset and explains whether a candidate meets explicit regression gates.
 
-**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 21 tests at 80% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by the local Docker daemon, so those tests are not evidence of live queue delivery.”
+**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 25 tests at 81% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by the local Docker daemon, so those tests are not evidence of live queue delivery.”
 
 **Three-minute walkthrough:**
 
@@ -107,6 +107,16 @@ These are engineering records to study, not claims about your own investigation.
 **Verification →** in-process workflow tests passed; Docker-dependent runtime checks are blocked.
 **Lesson →** explain both the architecture's purpose and what the available evidence does not prove.
 
+### 4. Reject misleading comparisons between different experiments
+
+**Problem →** completed runs with different datasets or scoring rules produced persisted release decisions.
+**Hypothesis →** aggregate rates hid the experimental inputs used to compute them.
+**Evidence →** three API regressions returned 201 instead of 422; their pass-rate gates passed even though workload or scoring changed.
+**Decision/fix →** require the same immutable dataset version and exact evaluator definitions before calculating or storing a decision.
+**Tradeoff →** equivalent dataset copies and reordered evaluator lists are conservatively rejected; semantic compatibility would need explicit rules.
+**Verification →** all rejection cases and the compatible control passed in the 25-test suite; existing workflow, lint, formatting, and typing passed.
+**Lesson →** hold workload and scoring fixed before interpreting metric differences. This was a reproduced implementation defect, not an intentional exercise or production incident.
+
 ## Demonstration script
 
 ### Verified in-process demonstration
@@ -138,7 +148,7 @@ Stop if readiness fails. A rendered Compose configuration does not prove that co
 
 Be able to explain immutable inputs, validation, authorization, transactions, idempotency, asynchronous delivery, deterministic tests, and explicit release policies without jargon.
 
-Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by the local Docker daemon. Static review raised retry recovery, concurrent idempotency, event sequencing, and comparison compatibility concerns; these are investigation candidates, not reproduced incidents.
+Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by the local Docker daemon. Comparison compatibility was reproduced and fixed. Static review still raises retry recovery, concurrent idempotency, and event sequencing concerns; those remain investigation candidates, not reproduced incidents.
 
 For production or scale, verify recovery ownership and concurrent writes on PostgreSQL, bound metrics cardinality, justify thresholds with representative data, review authorization boundaries, and add operational recovery procedures. Do not claim production readiness from a local synthetic demo.
 
@@ -177,7 +187,7 @@ Isolated learning-branch exercises will be prepared after the working baseline i
 - **Stack:** Next.js/TypeScript, FastAPI/Pydantic, SQLAlchemy/PostgreSQL, Celery/Redis.
 - **Design:** durable authority in the database; optional model integration; reproducible mock-first tests.
 - **Strongest bug story:** destructive test setup inherited application storage; prove it with disposable sentinel data; isolate before engine initialization.
-- **Verified evidence:** 21 Python tests, 80% coverage, five client tests, lint, typing, build, and Compose rendering.
+- **Verified evidence:** 25 Python tests, 81% coverage, five client tests, lint, typing, build, and Compose rendering.
 - **Boundary:** direct-engine tests are not live-worker proof; historical results are not fresh verification.
 - **Outstanding work:** remaining development advisories, Docker-dependent baseline, targeted reliability investigations, and learning exercises.
 - **Personal reflection:** supply your completed investigation notes; do not memorize invented first-person experience.

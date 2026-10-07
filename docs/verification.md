@@ -53,6 +53,10 @@ After updating Next.js/eslint-config-next to 16.4.0, Sharp to 0.35.5, and Vitest
 - The full audit still fails with 5 high-severity development package records propagated through the unpatched `braces` lint-tool chain. This is not a clean full audit; no exceptions were added.
 - Docker-dependent verification remains blocked.
 
+## Comparison compatibility increment
+
+On Windows/Python 3.12.10, the comparison guards passed Ruff lint, Ruff formatting (34 files), strict mypy across 18 application/changed-test files, and the full pytest coverage run: 25 tests, 81% coverage across 1,390 statements. Three pre-fix regressions had returned HTTP 201 for incompatible inputs; after the fix they return 422 and persist no decision. The compatible control and existing workflow pass. The Starlette/httpx deprecation warning remains. Docker-dependent checks are still unverified.
+
 ## Latest local test refresh
 
 Verified locally on July 29, 2026 with Python 3.12.10 and Node 24.11.0:

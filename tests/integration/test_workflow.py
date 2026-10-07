@@ -5,13 +5,7 @@ from evalpulse.engine import execute_run
 from evalpulse.models import EvaluationResult, RunEvent
 from fastapi.testclient import TestClient
 
-
-def post(
-    client: TestClient, path: str, payload: dict[str, object], headers: dict[str, str]
-) -> dict[str, object]:
-    response = client.post(path, json=payload, headers=headers)
-    assert response.status_code in {200, 201, 202}, response.text
-    return response.json()
+from tests.helpers import post
 
 
 def test_complete_authorized_regression_workflow(

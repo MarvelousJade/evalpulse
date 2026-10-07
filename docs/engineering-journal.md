@@ -194,6 +194,58 @@ A short guide cannot carry every hypothesis and command, so it links the journal
 
 This is a documentation and explanation hurdle, not a production incident. Learning exercises remain deferred until the working baseline is accepted.
 
+## Investigation: incompatible runs could produce a misleading release decision
+
+### Problem and acceptance criteria
+
+A regression gate is meaningful only when baseline and candidate use the same workload and scoring definitions. Static inspection found that the comparison endpoint checks project membership and completed status but does not compare dataset version IDs or evaluator snapshots.
+
+Expected: reject incompatible comparisons with HTTP 422 and persist no decision. Preserve comparisons across different prompt versions when dataset and evaluator definitions match.
+
+### Reproduction
+
+`tests/integration/test_comparisons.py` creates real immutable versions and runs through the API, executes the deterministic engine directly, then requests comparisons. Cases cover different dataset versions, different evaluator types, different regex options, and a compatible control. The differing workloads or scoring rules are chosen so each candidate scores 1.0 despite a lowercase prompt change; the compatible control scores 0.0.
+
+```shell
+.venv\Scripts\python.exe -m pytest tests/integration/test_comparisons.py -q
+```
+
+All three incompatible cases failed their rejection assertion: the API returned HTTP 201 and persisted comparison decisions instead of HTTP 422. Pass-rate checks passed at 1.0 for these incompatible workloads or scoring rules. Some final decisions were false because measured mock latency exceeded the default threshold; no claim is made that every reproduced comparison falsely approved a release. The defect is creating a decision for incomparable runs in the first place.
+
+This is an in-process API/engine reproduction, not a live-broker experiment or production incident. Shared HTTP setup was moved to `tests/helpers.py` so the existing workflow and new regressions do not duplicate helpers.
+
+### Root cause and fix
+
+The endpoint treated project membership and completion as sufficient comparability. Aggregate rates do not encode which cases or scoring definitions produced them. Added dataset-version and evaluator-snapshot equality checks before aggregate comparison and persistence. Different prompt versions remain valid candidates.
+
+### Tradeoffs and alternatives
+
+Exact equality is small, explicit, and preserves immutable provenance. It intentionally rejects equivalent dataset copies and reordered scoring definitions. Digest-based or semantic equivalence could permit more comparisons, but requires rules for case identity, order, tags, options, and scoring semantics; that complexity is not justified for this increment. No schema or provider behavior changes are needed.
+
+### Verification, lesson, and interview explanation
+
+Fresh checks passed on Windows/Python 3.12.10: Ruff lint, Ruff format check (34 files), strict mypy across 18 application and changed-test source files, and the full pytest coverage run (25 tests, 81% coverage across 1,390 statements, 121.90 seconds). All three incompatible cases now reject with HTTP 422 and persist no comparison; the compatible control and existing workflow pass. One Starlette/httpx deprecation warning remains. The lesson is that a metric comparison needs an experimental contract: hold workload and scoring fixed before interpreting differences. First reproduce acceptance of incompatible inputs, then reject them at the decision boundary and prove that rejection leaves no persisted decision.
+
+### References and provenance
+
+- `python/evalpulse/api.py`: `create_comparison`.
+- `tests/integration/test_comparisons.py` and `tests/integration/test_workflow.py`.
+- `tests/helpers.py` and `docs/architecture.md`.
+
+This defect existed before the continuation and was reproduced during ordinary rework. It was not intentionally introduced for a learning exercise. No production impact or personal investigation experience is inferred.
+
+### Minor implementation mistake
+
+An exact-text edit initially matched both `prompt` and `candidate_prompt` assignments and was rejected without changing the file. Used indentation-specific matches and reapplied successfully. No behavioral bug resulted; no meaningful tradeoff exists.
+
+### Continuation runtime check
+
+A fresh `docker info --format "{{.ServerVersion}}"` attempt timed out after 45 seconds with no server version. Unlike the earlier missing-pipe error, this provides no specific daemon error; readiness is unproven. A read-only process check showed Docker Desktop and `com.docker.backend` processes present and responding. That does not establish engine/API readiness or a specific root cause. The combined output did not establish a service status. No restart, container mutation, or volume deletion was performed. Do not rerun readiness commands merely to wait or treat the timeout as a passing check.
+
+### Branch boundary
+
+The user renamed local `master` to `me`. Work continues on `shaoyu/rework`; remote branches are unchanged, and integration into `me` still requires authorization. Historical kickoff references to `master` describe the branch name at that time.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.

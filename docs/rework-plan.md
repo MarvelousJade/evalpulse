@@ -31,7 +31,7 @@ Retain the existing Next.js dashboard, FastAPI application, SQLAlchemy database 
 - [x] Reproduce the main workflow in-process; document that live HTTP, broker, and browser checks remain blocked.
 - [x] Select safe test storage as the first focused improvement, supported by a disposable reproduction.
 - [ ] Implement each behavior with acceptance criteria, relevant tests, journal evidence, and a focused commit.
-- [x] Prepare `docs/interview-guide.md` with a demonstration, reading order, three factual stories, and a one-page summary; refresh it as evidence and personal study notes grow.
+- [x] Prepare `docs/interview-guide.md` with a demonstration, reading order, four factual stories, and a one-page summary; refresh it as evidence and personal study notes grow.
 - [ ] After verifying the baseline, prepare two or three isolated debugging exercises with learner instructions separated from solutions.
 - [ ] Fix and verify exercises, preserve checkpoints with a merge commit into `shaoyu/rework`, and verify the merged result.
 
@@ -56,6 +56,18 @@ The full audit still fails for five development package records propagated throu
 
 The full working baseline is not yet accepted. Do not introduce learning-branch defects or describe the entire rework as complete while runtime checks remain blocked. Reliability findings from static review require focused reproduction before selecting further code fixes. Main-branch integration and pushes remain unauthorized.
 
+## Next increment: comparable release decisions
+
+The release gate must compare the same immutable workload and scoring definitions. Acceptance criteria:
+
+- Different dataset versions are rejected with HTTP 422.
+- Different evaluator definitions, including options, are rejected with HTTP 422.
+- Rejected requests persist no comparison record.
+- Different prompt versions remain comparable when their dataset and evaluator definitions match.
+- Reproduce the current behavior with deterministic completed runs before changing the API, then rerun regressions and the existing workflow.
+
+Verification passed: 25 Python tests at 81% coverage, Ruff lint/formatting, and application/changed-test typing. The three rejection regressions and compatible control pass. This increment adds no tables, dependencies, or infrastructure. Exact matching is deliberately conservative; semantically equivalent dataset copies or reordered scoring definitions require a separately designed compatibility policy rather than implicit assumptions.
+
 ## Key reading path
 
 1. `tests/integration/test_workflow.py`: executable core workflow (direct engine execution, not broker proof).
@@ -66,10 +78,10 @@ The full working baseline is not yet accepted. Do not introduce learning-branch 
 6. `python/evalpulse/engine.py`: run claims, evaluation, persistence, and completion.
 7. `python/evalpulse/comparisons.py`: explicit release thresholds.
 
-Static review also identified retry-state, concurrent idempotency, comparison compatibility, and event-sequencing concerns. These are investigation candidates, not reproduced failures or accepted scope for an unrestricted rewrite.
+Comparison compatibility was reproduced and fixed. Static review also identified retry-state, concurrent idempotency, and event-sequencing concerns. These remain investigation candidates, not reproduced failures or accepted scope for an unrestricted rewrite.
 
 ## Change and integration boundaries
 
-The pre-existing uncommitted `apps/web/tsconfig.json` change belongs to the user and is excluded from rework commits. Stage specific task files and inspect staged changes. Do not push, rewrite history, or merge into `master` without authorization.
+The pre-existing uncommitted `apps/web/tsconfig.json` change belongs to the user and is excluded from rework commits. Stage specific task files and inspect staged changes. Do not push, rewrite history, or merge into `me` (the locally renamed `master` branch) without authorization.
 
 Learning defects must stay on a separate branch. Their fixes restore intentionally altered behavior; they must not be described as defects that previously affected the implementation branch. User study progress does not block completing fixes, but learner-facing instructions must precede solutions and explicit pause requests must be honored.

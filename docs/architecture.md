@@ -23,6 +23,8 @@ PostgreSQL stores all identity, version, run, result, comparison, and durable ev
 
 The API commits a queued run and dispatch record before attempting queue delivery. Workers atomically claim queued runs, upsert case results by `(run_id, test_case_id)`, and treat duplicate deliveries as no-ops. Server-Sent Events combine durable event replay with best-effort live progress.
 
+Release comparisons require completed runs in the selected project with the same immutable dataset version and identical evaluator definitions, including options. Different prompt versions may be compared, but changed workloads or scoring rules are rejected before a decision is persisted. Equality is deliberately conservative: dataset copies and reordered evaluator lists are not assumed equivalent.
+
 The default provider is deterministic: its output is derived only from immutable prompt text, case input, and provider configuration. This keeps development and CI reproducible and free. A live `gemini` provider uses the same normalized provider interface, while its model, endpoint, timeout, input size, output tokens, per-run cases, and daily allowance are controlled only by server settings.
 
 AI diagnosis is a bounded agent loop. The first model call is forced to select the single
