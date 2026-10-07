@@ -122,6 +122,58 @@ This was an existing implementation defect found during rework, not an intention
 
 The first disposable reproduction also reported Windows `PermissionError` during temporary-directory cleanup. Investigation showed that Python's SQLite connection context manager handles commit/rollback but does not close the connection. The regression test now wraps connections with `contextlib.closing` so handles close explicitly. This is a mistake in the uncommitted test increment, not an application incident. Explicit closure has no meaningful design tradeoff. The corrected regression passed in the full 21-test run without the earlier temporary-directory cleanup error.
 
+## Dependency remediation: audited runtime and development packages
+
+### Problem and reproduction
+
+The restored lockfile installation passed functional checks but failed the repository's production dependency audit. Reproduce with `node scripts/audit-production.mjs` and `npm audit --json`. The production report rejected Next.js, Sharp, and source-map-js; the complete report contained 13 vulnerable package records. This is dependency-advisory evidence, not proof of exploitation or a deployed incident.
+
+### Investigation and evidence
+
+Inspected the exact advisory ranges, npm's suggested fixes, and package registry metadata:
+
+```shell
+npm view next@16.4.0 engines dependencies --json
+npm view sharp@0.35.5 engines --json
+npm view vitest@4.1.11 engines dependencies --json
+npm view eslint-config-next@16.4.0 dependencies --json
+npm view source-map-js@1.2.2 version --json
+```
+
+Next.js and Sharp require Node >=20.9.0; Vitest 4.1.11 supports Node 22 and 24, matching the project range. Vitest 4.1.11 depends on the patched mocker version and no longer lists Tinypool. This metadata supports trying the upgrade but does not prove application compatibility. The current production audit also contained an obsolete Next/PostCSS exception tied to an older Next release. Lockfile review showed Vitest selected Vite 8.3.3, whose Node requirement is >=22.12.0 within the supported project major versions. Tightened the root Node minimum from 22 to 22.12 to avoid advertising unsupported earlier Node 22 releases. Verification ran on Node 24.19.0; Node 22 compatibility is based on engine metadata and remains CI's execution path.
+
+### Decision and fix in progress
+
+Align Next.js and eslint-config-next at 16.4.0, update the explicit Sharp pin to 0.35.5, and upgrade both Vitest consumers to ^4.1.11. Refresh the lockfile without automatic force-fixes. Remove the obsolete advisory exception rather than widening it; fail the audit when npm reports an audit error or cannot complete normally.
+
+Acceptance criteria: production audit passes with no exceptions; web lint, type checks, client tests, and production build pass; installation and lockfile agree; remaining full-audit findings are identified rather than hidden. Review the Vitest major upgrade for actual test compatibility.
+
+### Tradeoffs and alternatives
+
+A smaller patch-only update is preferred when it eliminates the reported vulnerabilities. Registry evidence supports Next 16.4.0 and Vitest 4.1.11; the latter changes a major version, so test verification is essential. Keeping vulnerable versions merely to avoid tooling changes leaves the audit failure unresolved. A forced automated update could introduce unrelated major upgrades and is not justified. Overrides must not substitute incompatible transitive versions without evidence.
+
+### Verification
+
+`npm install --ignore-scripts` refreshed the lockfile: 9 packages added, 16 removed, and 25 changed. The production audit passed with no vulnerabilities and no advisory exceptions. Workspace lint and typing, all 5 client tests under Vitest 4.1.11, script syntax validation, and the Next.js 16.4.0 production build passed. The web unit-test command exited successfully with no test files; it is not evidence of UI test coverage.
+
+Six audit-policy tests passed: clean report, vulnerable dependency, registry error, failed command, terminated command, and invalid JSON. CI now runs those tests before the real audit.
+
+Installation still reported 7 high-severity development dependency findings. The full report identified @next/eslint-plugin-next, eslint-config-next, fast-glob, micromatch, braces, brace-expansion, and js-yaml. Registry inspection showed `braces` latest is 3.0.3, still in the affected range. npm suggested downgrading eslint-config-next to 14.2.35 for that chain; this would misalign it with Next 16 and is not accepted. A range-respecting `npm update brace-expansion js-yaml --ignore-scripts` changed three transitive packages and eliminated those two package findings. Clean `npm ci --ignore-scripts` then passed, followed by all 6 audit-policy tests, the production audit, workspace lint and typing, all 5 client tests, and the Next.js 16.4.0 build. The final `npm audit --json` exited 1 with 5 high-severity package records in the unpatched braces chain: braces, micromatch, fast-glob, @next/eslint-plugin-next, and eslint-config-next. These are five package records propagated from the same underlying advisory, not five independent demonstrated exploits. The complete audit is not passing. No audit exceptions or unsupported major overrides were added. Docker runtime verification remains blocked by the unavailable daemon.
+
+### Lesson, references, and provenance
+
+Functional correctness and dependency security are separate checks. A successful build does not establish a clean audit, and an audit finding does not establish exploitation. Evidence must include exact package versions, affected ranges, compatibility constraints, and actual post-update results.
+
+- Previous test-isolation increment: `902813e`.
+- `package.json`, `apps/web/package.json`, `packages/api-client/package.json`, and `package-lock.json`.
+- `scripts/audit-production.mjs`.
+
+These findings arose from existing dependencies during baseline verification, not from intentionally introduced exercises. Personal learning claims remain reserved for completed study notes.
+
+## Minor mistake: documentation validation command syntax
+
+The first interview-guide structure check did not execute because its Python command used `%%` instead of a valid parity expression. The traceback showed a `SyntaxError` before any checks ran. Replaced the expression with a bitwise parity check and reran it; unique headings, balanced code fences, and existing local link targets passed. The guide-only whitespace check also passed. This is an uncommitted verification-command mistake, not a project defect. There is no meaningful design tradeoff; keep shell quoting separate from embedded-language syntax and never report a failed command as verification.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.

@@ -41,6 +41,18 @@ Fresh local checks used Python 3.12.10, Node 24.19.0, and npm 11.17.0:
 
 The workflow tests execute the engine directly and stub broker dispatch. Their SQLite results do not prove live worker delivery or PostgreSQL concurrency behavior. See the [engineering journal](engineering-journal.md) for commands, failed attempts, evidence, and limitations.
 
+## Dependency refresh during rework
+
+After updating Next.js/eslint-config-next to 16.4.0, Sharp to 0.35.5, and Vitest to 4.1.11:
+
+- Production audit passed with no vulnerabilities and no advisory exceptions.
+- All 6 production-audit policy tests passed.
+- Workspace lint and typing, all 5 client tests, and the production build passed.
+- The web unit-test command found no tests; its zero exit status is not UI coverage.
+- Range-respecting transitive updates and a clean `npm ci --ignore-scripts` passed, followed by the audit-policy tests, production audit, lint, typing, client tests, and build again.
+- The full audit still fails with 5 high-severity development package records propagated through the unpatched `braces` lint-tool chain. This is not a clean full audit; no exceptions were added.
+- Docker-dependent verification remains blocked.
+
 ## Latest local test refresh
 
 Verified locally on July 29, 2026 with Python 3.12.10 and Node 24.11.0:

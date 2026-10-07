@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.12 <25"
   },
   "workspaces": [
     "apps/web",
@@ -11,8 +11,8 @@
     "tests/e2e"
   ],
   "dependencies": {
-    "next": "16.3.1",
-    "sharp": "0.35.3"
+    "next": "16.4.0",
+    "sharp": "0.35.5"
   },
   "overrides": {
     "next": {
