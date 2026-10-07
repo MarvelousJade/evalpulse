@@ -418,13 +418,15 @@ def create_run(
         provider_config=body.provider_config,
         evaluators=[spec.model_dump(mode="json") for spec in body.evaluators],
     )
-    db.add(run)
-    db.flush()
-    db.add(RunDispatch(run_id=run.id))
-    db.add(
-        RunEvent(run_id=run.id, sequence=1, event_type="run.queued", payload={"status": "queued"})
-    )
     try:
+        db.add(run)
+        db.flush()
+        db.add(RunDispatch(run_id=run.id))
+        db.add(
+            RunEvent(
+                run_id=run.id, sequence=1, event_type="run.queued", payload={"status": "queued"}
+            )
+        )
         db.commit()
     except IntegrityError:
         db.rollback()

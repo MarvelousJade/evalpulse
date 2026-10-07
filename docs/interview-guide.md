@@ -4,7 +4,7 @@
 
 **One sentence:** EvalPulse evaluates versioned prompts against a shared dataset and explains whether a candidate meets explicit regression gates.
 
-**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 34 tests at 82% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by Docker storage errors on a host with no free C: space, so those tests are not evidence of live queue delivery.”
+**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 36 tests at 82% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by Docker storage/startup errors after host disk exhaustion, so those tests are not evidence of live queue delivery.”
 
 **Three-minute walkthrough:**
 
@@ -117,6 +117,16 @@ These are engineering records to study, not claims about your own investigation.
 **Verification →** all rejection cases and the compatible control passed in the 25-test suite; existing workflow, lint, formatting, and typing passed.
 **Lesson →** hold workload and scoring fixed before interpreting metric differences. This was a reproduced implementation defect, not an intentional exercise or production incident.
 
+### 5. Recover duplicate run submissions where the constraint is checked
+
+**Problem →** a competing submission committed between lookup and insertion, then the losing request raised an unhandled unique-constraint error.
+**Hypothesis →** recovery covered commit but not the earlier SQLAlchemy flush.
+**Evidence →** a controlled separate-session commit before flush reproduced the error at the unique `(user, idempotency key)` constraint.
+**Decision/fix →** put insertion, flush, dispatch/event creation, and commit inside the same rollback/recovery boundary; return the committed winner.
+**Tradeoff →** database uniqueness remains authoritative; the test controls one interleaving rather than proving every live PostgreSQL contention scenario.
+**Verification →** the winner case and unrelated-error control passed with one run/dispatch/event or no partial records, respectively; all 36 tests, formatting, lint, and typing passed.
+**Lesson →** handle errors where SQL executes, not only where transactions commit. This is an existing defect reproduced during rework, not a production incident.
+
 ## Demonstration script
 
 ### Verified in-process demonstration
@@ -148,7 +158,7 @@ Stop if readiness fails. A rendered Compose configuration does not prove that co
 
 Be able to explain immutable inputs, validation, authorization, transactions, idempotency, asynchronous delivery, deterministic tests, and explicit release policies without jargon.
 
-Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by Docker storage I/O/read-only errors; host C: has no free space. An authorized Desktop restart restored a Linux engine response, but builds did not complete. Comparison compatibility and caught temporary-provider retry recovery were reproduced and fixed. Worker-loss recovery and release-to-broker scheduling remain explicit limitations. Concurrent idempotency and event sequencing are still static investigation candidates, not reproduced incidents.
+Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by Docker storage I/O/read-only errors; host C: was full. A later check found about 2.5 GB free, but readiness and a subsequent restart sequence timed out. An earlier authorized restart restored a Linux engine response, but builds did not complete. Comparison compatibility and caught temporary-provider retry recovery were reproduced and fixed. Worker-loss recovery and release-to-broker scheduling remain explicit limitations. The run-submission flush race was reproduced and fixed with controlled interleaving tests. Event sequencing remains a static investigation candidate, not a reproduced incident.
 
 For production or scale, verify recovery ownership and concurrent writes on PostgreSQL, bound metrics cardinality, justify thresholds with representative data, review authorization boundaries, and add operational recovery procedures. Do not claim production readiness from a local synthetic demo.
 
@@ -187,7 +197,7 @@ Isolated learning-branch exercises will be prepared after the working baseline i
 - **Stack:** Next.js/TypeScript, FastAPI/Pydantic, SQLAlchemy/PostgreSQL, Celery/Redis.
 - **Design:** durable authority in the database; optional model integration; reproducible mock-first tests.
 - **Strongest bug story:** destructive test setup inherited application storage; prove it with disposable sentinel data; isolate before engine initialization.
-- **Verified evidence:** 34 Python tests, 82% coverage, five client tests, lint, typing, build, and Compose rendering.
+- **Verified evidence:** 36 Python tests, 82% coverage, five client tests, lint, typing, build, and Compose rendering.
 - **Boundary:** direct-engine tests are not live-worker proof; historical results are not fresh verification.
 - **Outstanding work:** remaining development advisories, Docker-dependent baseline, targeted reliability investigations, and learning exercises.
 - **Personal reflection:** supply your completed investigation notes; do not memorize invented first-person experience.

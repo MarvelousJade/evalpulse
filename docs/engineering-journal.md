@@ -311,6 +311,38 @@ The isolated application build/start failed. Python package installation reporte
 
 The Docker startup hurdle was an observed local environment issue, not an application or production incident. Full-stack and learning-exercise results will be recorded only after they run.
 
+## Continuation: partial space recovery and run-submission race
+
+### Docker storage readiness
+
+A fresh host-capacity check reported C: free space = 2,516,295,680 bytes and G: free space = 104,680,407,040 bytes. The chained Docker engine query timed out after 60 seconds, so Docker storage usage did not run. Some host space was freed, but usable Docker storage is not established. A single Desktop restart/readiness sequence under the existing restart authorization timed out after 240 seconds without a new engine version or storage report. The sequence is not repeated blindly, and no recovered runtime is claimed. C: remains tight for builds; free more host space or use Docker Desktop's supported disk-image relocation workflow with backups and explicit authorization. No pruning, reset, volume deletion, or relocation was performed.
+
+### Run-submission problem and hypothesis
+
+Static inspection found that `create_run` flushes the new uniquely keyed run before entering its `IntegrityError` handler. A competing request can commit after the initial lookup returns no existing run; the losing insert would then fail at flush outside recovery rather than returning the committed winner.
+
+### Reproduction and acceptance criteria
+
+`tests/integration/test_idempotency.py` injects a separate-session committed run, dispatch intent, and queued event immediately before the original flush. It then expects the API to return the winner and leave exactly one of each record. A second synthetic case raises an unrelated integrity failure and expects it to propagate without partial persistence.
+
+```cmd
+.venv\Scripts\python.exe -m pytest tests/integration/test_idempotency.py -q
+```
+
+The competing-commit case failed with an unhandled `IntegrityError` at `api.py`'s explicit `db.flush()`: SQLite's unique constraint on `(created_by_id, idempotency_key)` rejected the losing insertion before the recovery handler was entered. The unrelated-failure control passed. The injection controls a realistic interleaving but is not a live concurrent HTTP/load experiment. The unrelated error is a labelled synthetic test condition, not an observed incident.
+
+### Tradeoffs and provenance
+
+Moved insertion, explicit flush, dispatch/event creation, and commit inside the same recovery boundary while retaining database uniqueness and rollback. The failure handler can now look up the committed winner after a flush collision; it still re-raises if no matching run exists. No locks, schema changes, or new dependencies were added. Fresh checks passed on Windows/Python 3.12.10: Ruff lint, Ruff format check (36 files), strict mypy across 16 application/changed-test source files, both focused idempotency cases, and all 36 Python tests (82% coverage across 1,401 statements, 183.71 seconds). Recovery returned the committed winner and left one run/dispatch/event; the unrelated-error control propagated without partial records. The existing sequential workflow passed. One Starlette/httpx warning remains. Live PostgreSQL contention and broker behavior were not tested. A pre-insert lookup alone cannot guarantee uniqueness under contention; the database constraint is the authority. This is an existing implementation defect reproduced during rework, not an intentionally introduced learning defect or production incident.
+
+### Lesson, interview explanation, and references
+
+A SQLAlchemy flush can execute constraint-checked SQL before commit. Recovery must cover the point where the error can actually occur, not merely the final commit. Reproduce the interleaving deterministically, move all related writes inside the rollback/recovery boundary, and verify both successful deduplication and propagation of unrelated failures.
+
+- `python/evalpulse/api.py`: `create_run`.
+- `tests/integration/test_idempotency.py`.
+- Existing sequential coverage: `tests/integration/test_workflow.py`.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.

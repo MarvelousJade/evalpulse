@@ -67,6 +67,12 @@ On Windows/Python 3.12.10, Ruff lint/formatting (35 files), strict mypy across 1
 
 A BuildKit bind-mounted context probe executed the environment/metadata exclusion assertions successfully, but its image export failed with an I/O error. Context checks executed; the overall probe build did not pass and no completed probe image is claimed. Host storage inspection reported zero free bytes on C:, and `docker system df` failed reading snapshot storage. Free host space before retrying; no pruning, volume deletion, data relocation, or reset was performed.
 
+## Run-submission flush recovery increment
+
+On Windows/Python 3.12.10, Ruff lint/formatting (36 files), strict mypy across 16 application/changed-test files, both focused idempotency regressions, and all 36 Python tests passed. Coverage was 82% across 1,401 statements; the full run took 183.71 seconds. A separate-session committed winner injected before flush is returned with one run/dispatch/event; an unrelated synthetic integrity failure still propagates without partial records. This is controlled interleaving evidence, not live PostgreSQL contention or a load benchmark. The Starlette/httpx warning remains.
+
+A later storage check found about 2.5 GB free on C:, but Docker readiness timed out after 60 seconds and the subsequent restart/readiness sequence after 240 seconds. No recovered runtime or successful full-stack result is claimed.
+
 ## Latest local test refresh
 
 Verified locally on July 29, 2026 with Python 3.12.10 and Node 24.11.0:
