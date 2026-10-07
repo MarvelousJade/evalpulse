@@ -424,6 +424,12 @@ The diagnosis, progressive hints, tradeoffs, and lesson are separate from learne
 
 Minor documentation mistake caught during staged review: the case 02 worktree example retained its safety warning on the closing code-fence line. Moved the warning into a separate paragraph before committing; fence checks passed for all three staged documents, alongside the scoped diff check. This was an uncommitted documentation-edit mistake, not the intentional authorization defect.
 
+### Case 02 correction and evidence boundaries
+
+Faulty checkpoint `f2bbc8e` is preserved by `learning/02-faulty`. Restored project membership authorization in `authorized_run` before returning data, preserving nonmember 404, missing-run handling, and legitimate member reads. The guard is shared by metadata/results and other run-scoped callers; regressions explicitly cover the two reported read routes, not every caller or side channel. This restores behavior already present in the implementation branch; it is not a repair to a main-branch production defect.
+
+Separate diagnosis, progressive hints, tradeoffs, lesson, and interview explanation are in `docs/debugging/solutions/02-run-access.md`. Fresh verification passed: both focused routes and their owner/nonmember/unknown-run/viewer assertions (5.15 seconds), all 40 SQLite tests at 82% coverage across 1,401 statements (125.28 seconds), Ruff formatting/lint (39 files including the local helper), and strict mypy (18 application/test/helper files). The known Starlette/httpx warning remained. A separate read-only diff check confirmed both API and engine match baseline `7d26f9b` exactly. Preserve this separate correction as `learning/02-fixed`; merged-state PostgreSQL and full-stack checks remain required. No schema, dependency, role-system, or authentication change was needed. Both intentional defects must be resolved and the complete diff inspected before merging; the running stack never received either faulty implementation.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.
