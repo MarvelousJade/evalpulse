@@ -28,10 +28,10 @@ Retain the existing Next.js dashboard, FastAPI application, SQLAlchemy database 
 - [x] Create `shaoyu/rework` from the current implementation, preserving history.
 - [x] Inspect the implementation and existing test coverage; identify a short reading path.
 - [x] Record fresh formatter, linter, type-checker, test, and build results with environment details; document blocked full-stack checks and failed audits.
-- [ ] Reproduce the main workflow locally; distinguish in-process, HTTP, and browser evidence.
+- [x] Reproduce the main workflow in-process; document that live HTTP, broker, and browser checks remain blocked.
 - [x] Select safe test storage as the first focused improvement, supported by a disposable reproduction.
 - [ ] Implement each behavior with acceptance criteria, relevant tests, journal evidence, and a focused commit.
-- [ ] Complete `docs/interview-guide.md` with a demonstration, reading order, factual stories, and a one-page summary.
+- [x] Prepare `docs/interview-guide.md` with a demonstration, reading order, three factual stories, and a one-page summary; refresh it as evidence and personal study notes grow.
 - [ ] After verifying the baseline, prepare two or three isolated debugging exercises with learner instructions separated from solutions.
 - [ ] Fix and verify exercises, preserve checkpoints with a merge commit into `shaoyu/rework`, and verify the merged result.
 
@@ -47,6 +47,14 @@ Static inspection found that `tests/conftest.py` retains inherited `DATABASE_URL
 - Update CI to opt into its dedicated PostgreSQL test database without changing migration configuration.
 - Prove inherited application data remains intact and invalid overrides fail before database setup.
 - Verify formatting, lint, typing, and affected tests, then commit the coherent increment.
+
+## Current evidence and remaining work
+
+The safe-storage increment is committed as `902813e`. Python verification passed 21 tests at 80% coverage, Ruff, and application/changed-test typing. The dependency increment is committed as `801d4d2`: clean installation, six audit-policy tests, the production audit without exceptions, workspace lint and typing, five client tests, and the build passed.
+
+The full audit still fails for five development package records propagated through unpatched `braces`. Docker Desktop's selected Linux daemon is unavailable, so container, PostgreSQL/Redis, live HTTP smoke, and browser checks remain unverified. Start the local daemon before attempting those checks; use disposable local storage and do not delete existing volumes.
+
+The full working baseline is not yet accepted. Do not introduce learning-branch defects or describe the entire rework as complete while runtime checks remain blocked. Reliability findings from static review require focused reproduction before selecting further code fixes. Main-branch integration and pushes remain unauthorized.
 
 ## Key reading path
 

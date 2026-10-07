@@ -174,6 +174,26 @@ These findings arose from existing dependencies during baseline verification, no
 
 The first interview-guide structure check did not execute because its Python command used `%%` instead of a valid parity expression. The traceback showed a `SyntaxError` before any checks ran. Replaced the expression with a bitwise parity check and reran it; unique headings, balanced code fences, and existing local link targets passed. The guide-only whitespace check also passed. This is an uncommitted verification-command mistake, not a project defect. There is no meaningful design tradeoff; keep shell quoting separate from embedded-language syntax and never report a failed command as verification.
 
+## Portfolio documentation: one workflow and bounded evidence
+
+### Hurdle and decision
+
+The existing documentation explains technologies but does not provide one short study path tying purpose, implementation, failure investigation, and verified evidence together. Prepared `docs/interview-guide.md` with introductions, an architecture map, component contracts and failure cases, an ordered reading path, three factual engineering stories, demonstration steps, questions, and a one-page summary.
+
+Use the guide for quick preparation and the journal for detailed evidence. Personal investigation claims remain separate; no personal motivation or learning was invented. The README now links both documents and replaces an unsupported blanket retry-safety claim with the distinction between result checkpointing and demonstrated recovery behavior.
+
+### Tradeoffs and verification
+
+A short guide cannot carry every hypothesis and command, so it links the journal and verification notes. Historical functional results, fresh rework results, blocked runtime checks, and unresolved dependency advisories remain distinct. Combined README/guide/plan checks passed for unique headings, balanced code fences, existing local-link targets, and scoped whitespace. The README and plan diffs were reviewed. No Markdown-specific formatter or linter is configured in the repository; these were structural and manual documentation checks, not application test reruns. No new application behavior is included in this documentation increment.
+
+### References and provenance
+
+- Safe test-storage fix: `902813e`.
+- Dependency remediation: `801d4d2`.
+- `README.md`, `docs/interview-guide.md`, `docs/rework-plan.md`, and `docs/verification.md`.
+
+This is a documentation and explanation hurdle, not a production incident. Learning exercises remain deferred until the working baseline is accepted.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.
