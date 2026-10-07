@@ -28,7 +28,57 @@ In PowerShell, use `$env:TEST_DATABASE_URL = "postgresql+psycopg://localhost/eva
 
 Measured counts and performance claims belong here only after the commands have run in a clean environment. The local Kubernetes overlay is a demonstration path and is not described as production infrastructure.
 
-## Rework baseline (Windows)
+## Current runtime baseline
+
+After host storage recovery, Linux Docker 29.8.2 passed readiness/storage inspection. The isolated `evalpulse-rework` stack built and started, migrations completed, and API/PostgreSQL/Redis were healthy; web/worker were running. Runtime versions: Python 3.12.10, Node 22.17.0, PostgreSQL 17.5, Redis 8.0.6.
+
+- Public HTTP smoke passed through the live broker/worker: baseline pass rate 1.0, candidate 0.0, expected failed release decision.
+- The existing Playwright reviewer workflow passed: one test (11.6 seconds), total runner time 20.8 seconds.
+- Rendered-browser inspection also completed the three-case workflow and confirmed two completed runs, 100%/0% pass rates, and `Regression detected`/`FAIL` with separate policy outcomes.
+- All 36 Python tests passed on `evalpulse_rework_test` PostgreSQL at 82% coverage across 1,401 statements (55.86 seconds, Linux/Python 3.12.10). The initial runner omitted documentation fixtures: 33 passed/3 failed; adding the read-only fixture mount fixed the harness, without application changes.
+- The BuildKit context exclusion probe passed assertions and completed image export/unpack. Private `.env*`, `.pi`, and `.neon` were absent; `.env.example` remained.
+- A read-only application-database query found six completed runs from the three workflows. Destructive pytest setup targeted only the separately provisioned `_test` database.
+
+These are local mock/controlled-interleaving results. They do not establish worker-loss recovery, all concurrent-delivery scenarios, production load or model quality. The known Starlette/httpx deprecation warning remains. Fresh Ruff lint/formatting (36 files), strict mypy (16 application/changed-test files), workspace lint/typing, five client tests, six audit-policy tests, and production audit all passed. Production audit reported no vulnerabilities. The last full npm audit still flagged five development dependency records; this is not a clean full audit.
+
+### Isolated stack and HTTP/browser reproduction (Windows cmd)
+
+Use only local disposable development storage. The session value below is a test placeholder, not a secret suitable for a shared deployment. Default Compose port publishing can expose services on host interfaces; do not expose this demo to untrusted networks.
+
+```cmd
+set "API_PORT=18000"
+set "WEB_PORT=13000"
+set "MIGRATION_DATABASE_URL=postgresql+psycopg://evalpulse:evalpulse@postgres:5432/evalpulse"
+set "LLM_ENABLED=false"
+set "GEMINI_API_KEY="
+set "SESSION_SECRET=rework-local-placeholder-secret-at-least-32-characters"
+docker compose --parallel 1 --env-file .env.example -p evalpulse-rework up --build --detach --wait --wait-timeout 180
+.venv\Scripts\python.exe scripts\smoke.py http://localhost:18000
+set "PLAYWRIGHT_BROWSERS_PATH=%cd%\.pi\playwright-browsers"
+call node_modules\.bin\playwright.cmd install chromium
+set "E2E_BASE_URL=http://localhost:13000"
+call node_modules\.bin\playwright.cmd test --config tests\e2e\playwright.config.ts --output .pi\verification\playwright-results
+```
+
+### Disposable PostgreSQL reproduction
+
+Provision `evalpulse_rework_test` once in this isolated stack and confirm it belongs exclusively to tests before running destructive fixtures. The API's normal `evalpulse` database must not be selected. The runner mounts only source, tests, documentation fixtures, and configuration read-only; no private environment files are mounted. An ephemeral `/tmp` virtual environment uses the image's application dependencies plus pytest/httpx/coverage. Select `COVERAGE_CORE=pytrace` to avoid attempting native tracer mapping on the protected temporary mount.
+
+```cmd
+docker compose --env-file .env.example -p evalpulse-rework exec -T postgres createdb -U evalpulse evalpulse_rework_test
+docker compose --env-file .env.example -p evalpulse-rework run --rm --no-deps ^
+  --entrypoint sh --workdir /workspace ^
+  -e "TEST_DATABASE_URL=postgresql+psycopg://evalpulse:evalpulse@postgres:5432/evalpulse_rework_test" ^
+  -e "PYTHONDONTWRITEBYTECODE=1" -e "COVERAGE_FILE=/tmp/.coverage" -e "COVERAGE_CORE=pytrace" ^
+  -e "LLM_ENABLED=false" -e "GEMINI_API_KEY=" ^
+  -v "%cd%\python:/workspace/python:ro" -v "%cd%\tests:/workspace/tests:ro" ^
+  -v "%cd%\docs:/workspace/docs:ro" -v "%cd%\pyproject.toml:/workspace/pyproject.toml:ro" ^
+  api -c "python -m venv --system-site-packages /tmp/test-venv && /tmp/test-venv/bin/python -m pip install --no-cache-dir 'pytest>=8.4,<9' 'pytest-cov>=6.2,<7' 'httpx>=0.28,<1' && /tmp/test-venv/bin/python -m pytest --cov=evalpulse --cov-report=term-missing"
+```
+
+The successful runner resolved pytest 8.4.2, pytest-cov 6.3.0, httpx 0.28.1, and coverage 7.16.2. The command above inlines the same temporary runner script used for verification; future dependency ranges may resolve differently. See the journal for the failed setup attempt, correction, and local artifact paths.
+
+## Historical rework baseline (Windows)
 
 Fresh local checks used Python 3.12.10, Node 24.19.0, and npm 11.17.0:
 
@@ -73,7 +123,7 @@ On Windows/Python 3.12.10, Ruff lint/formatting (36 files), strict mypy across 1
 
 A later storage check found about 2.5 GB free on C:, but Docker readiness timed out after 60 seconds and the subsequent restart/readiness sequence after 240 seconds. No recovered runtime or successful full-stack result is claimed.
 
-## Latest local test refresh
+## Historical local test refresh
 
 Verified locally on July 29, 2026 with Python 3.12.10 and Node 24.11.0:
 

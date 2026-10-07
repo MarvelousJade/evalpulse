@@ -4,7 +4,7 @@
 
 **One sentence:** EvalPulse evaluates versioned prompts against a shared dataset and explains whether a candidate meets explicit regression gates.
 
-**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 36 tests at 82% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by Docker storage/startup errors after host disk exhaustion, so those tests are not evidence of live queue delivery.”
+**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The Python suite passed 36 tests at 82% statement coverage on both SQLite and disposable PostgreSQL. The containerized mock workflow also passed live HTTP and browser checks through Redis/Celery, alongside five typed client tests. These are local correctness results, not production reliability or model-quality evidence.”
 
 **Three-minute walkthrough:**
 
@@ -139,7 +139,7 @@ python -m pytest tests/integration/test_workflow.py::test_complete_authorized_re
 
 Explain the uppercase expectations, lowercase candidate transformation, baseline pass rate of 1.0, candidate pass rate of 0.0, and failed comparison. This test exercises HTTP handlers and direct engine execution, not a live Celery worker.
 
-### Full-stack demonstration (not freshly verified during rework)
+### Verified full-stack demonstration
 
 Follow [local setup](../README.md#run-locally) using disposable local development storage, keep live model calls disabled, and start Docker Desktop first. Do not reuse production database URLs or delete existing volumes.
 
@@ -152,13 +152,13 @@ Follow [local setup](../README.md#run-locally) using disposable local developmen
 7. Optional CLI smoke: `python scripts/smoke.py http://localhost:8000`.
 8. Optional browser test: `npm test --workspace @evalpulse/e2e` against a running stack.
 
-Stop if readiness fails. A rendered Compose configuration does not prove that containers work. The smoke script creates synthetic projects and runs; it must not target a production endpoint.
+During rework, the isolated `evalpulse-rework` stack passed this workflow at `http://localhost:13000` (API `http://localhost:18000`). The HTTP smoke and one Playwright test passed; an additional rendered-browser inspection confirmed both completed runs and the policy report. See [verification](verification.md) for configuration and evidence. Stop if readiness fails. The smoke script creates synthetic projects and runs; it must not target a production endpoint.
 
 ## Learning, limitations, and future changes
 
 Be able to explain immutable inputs, validation, authorization, transactions, idempotency, asynchronous delivery, deterministic tests, and explicit release policies without jargon.
 
-Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by Docker storage I/O/read-only errors; host C: was full. A later check found about 2.5 GB free, but readiness and a subsequent restart sequence timed out. An earlier authorized restart restored a Linux engine response, but builds did not complete. Comparison compatibility and caught temporary-provider retry recovery were reproduced and fixed. Worker-loss recovery and release-to-broker scheduling remain explicit limitations. The run-submission flush race was reproduced and fixed with controlled interleaving tests. Event sequencing remains a static investigation candidate, not a reproduced incident.
+Current limitations: production dependency remediation and clean-install checks passed, but the last full audit still flagged 5 high-severity development package records in the unpatched `braces` lint-tool chain. Host storage/startup failures were overcome; the containerized mock workflow and disposable PostgreSQL suite now pass. Worker-loss recovery, release-to-broker scheduling, broad concurrent-delivery behavior, live Gemini, and production scale remain unverified or explicitly limited. Comparison compatibility, caught temporary-provider retry recovery, and the controlled run-submission flush race were reproduced and fixed. Event sequencing remains a static investigation candidate, not a reproduced incident.
 
 For production or scale, verify recovery ownership and concurrent writes on PostgreSQL, bound metrics cardinality, justify thresholds with representative data, review authorization boundaries, and add operational recovery procedures. Do not claim production readiness from a local synthetic demo.
 
@@ -173,9 +173,9 @@ Next time, establish safe test configuration and evidence boundaries before runn
 | Why Redis and PostgreSQL? | Delivery/progress versus durable authority | What happens if Redis disappears mid-run? |
 | Does idempotency make retries safe? | It helps deduplicate effects; ownership and recovery also matter | Can a checkpointed running task be stranded? |
 | What bug did you investigate? | Explain the disposable test-storage reproduction and fix | Why must configuration change before imports? |
-| How was correctness checked? | Regression, workflow, typing, lint, build; name blocked checks | Why are SQLite tests insufficient for concurrent claims? |
+| How was correctness checked? | Regression, SQLite/PostgreSQL suites, live HTTP/browser workflow, typing, lint, build; state evidence limits | Why are SQLite tests insufficient for concurrent claims? |
 | Why these release gates? | Explicit policy, measurable outcomes, explainable thresholds | Is latency meaningful with different workloads? |
-| What is not proven? | Live delivery, scale, production use, or exploitation | What experiment would establish the missing evidence? |
+| What is not proven? | Crash recovery, broad contention, scale, production use, or exploitation | What experiment would establish the missing evidence? |
 | What would you simplify? | Keep one workflow, optional extensions, no new infrastructure without need | When would synchronous execution be preferable? |
 
 ## Quick preparation plan
@@ -197,7 +197,7 @@ Isolated learning-branch exercises will be prepared after the working baseline i
 - **Stack:** Next.js/TypeScript, FastAPI/Pydantic, SQLAlchemy/PostgreSQL, Celery/Redis.
 - **Design:** durable authority in the database; optional model integration; reproducible mock-first tests.
 - **Strongest bug story:** destructive test setup inherited application storage; prove it with disposable sentinel data; isolate before engine initialization.
-- **Verified evidence:** 36 Python tests, 82% coverage, five client tests, lint, typing, build, and Compose rendering.
+- **Verified evidence:** 36 tests/82% coverage on SQLite and PostgreSQL; live HTTP and browser workflow; five client tests, lint, typing, container build/startup.
 - **Boundary:** direct-engine tests are not live-worker proof; historical results are not fresh verification.
-- **Outstanding work:** remaining development advisories, Docker-dependent baseline, targeted reliability investigations, and learning exercises.
+- **Outstanding work:** remaining development advisories, targeted reliability investigations, and learning exercises.
 - **Personal reflection:** supply your completed investigation notes; do not memorize invented first-person experience.

@@ -28,9 +28,9 @@ Retain the existing Next.js dashboard, FastAPI application, SQLAlchemy database 
 - [x] Create `shaoyu/rework` from the current implementation, preserving history.
 - [x] Inspect the implementation and existing test coverage; identify a short reading path.
 - [x] Record fresh formatter, linter, type-checker, test, and build results with environment details; document blocked full-stack checks and failed audits.
-- [x] Reproduce the main workflow in-process; document that live HTTP, broker, and browser checks remain blocked.
+- [x] Reproduce the main workflow in-process and verify live HTTP, broker, and browser execution on the isolated stack.
 - [x] Select safe test storage as the first focused improvement, supported by a disposable reproduction.
-- [ ] Implement each behavior with acceptance criteria, relevant tests, journal evidence, and a focused commit.
+- [x] Implement baseline behaviors with acceptance criteria, relevant tests, journal evidence, and focused commits.
 - [x] Prepare `docs/interview-guide.md` with a demonstration, reading order, five factual stories, and a one-page summary; refresh it as evidence and personal study notes grow.
 - [ ] After verifying the baseline, prepare two or three isolated debugging exercises with learner instructions separated from solutions.
 - [ ] Fix and verify exercises, preserve checkpoints with a merge commit into `shaoyu/rework`, and verify the merged result.
@@ -52,9 +52,9 @@ Static inspection found that `tests/conftest.py` retains inherited `DATABASE_URL
 
 The safe-storage increment is committed as `902813e`. Python verification passed 21 tests at 80% coverage, Ruff, and application/changed-test typing. The dependency increment is committed as `801d4d2`: clean installation, six audit-policy tests, the production audit without exceptions, workspace lint and typing, five client tests, and the build passed.
 
-The full audit still fails for five development package records propagated through unpatched `braces`. An authorized Docker Desktop restart restored a Linux engine response, but isolated builds failed with storage I/O errors and read-only BuildKit metadata. Host C: had zero free bytes during the failed build; a later check found about 2.5 GB free, but engine readiness and a subsequent restart sequence timed out. Docker's snapshot storage inspection also failed. Container, PostgreSQL/Redis, live HTTP smoke, and browser checks remain unverified. Free host storage before retrying; use disposable local application storage and do not delete existing volumes or reset Docker without separate authorization.
+Host storage/startup failures were overcome: Linux Docker 29.8.2 responds, the isolated stack built and started, migrations completed, and live HTTP, Playwright, rendered-browser inspection, and the build-context export probe passed. All 36 Python tests passed on disposable PostgreSQL at 82% coverage, matching the latest SQLite result. The initial PostgreSQL runner omitted documentation fixtures; its three failures were corrected by mounting them, without application changes. Fresh Ruff formatting/lint, strict mypy, workspace lint/typing, five client tests, six audit-policy tests, and the clean production audit also passed. The working baseline meets its acceptance criteria. See the journal and verification document for exact results and commands.
 
-The full working baseline is not yet accepted. Do not introduce learning-branch defects or describe the entire rework as complete while runtime checks remain blocked. Reliability findings from static review require focused reproduction before selecting further code fixes. Main-branch integration and pushes remain unauthorized.
+Runtime acceptance criteria are met. Prepare two isolated learning exercises only from the verified checkpoint, preserve faulty and fixed commits, and integrate the corrected state into `shaoyu/rework`. Do not describe the entire rework as complete before exercises and merged-state checks are done. The last full audit still flagged five development package records through unpatched `braces`; worker-loss recovery and broad contention remain unverified. Reliability candidates require focused reproduction before further code fixes. Main-branch integration and pushes remain unauthorized.
 
 ## Completed increment: comparable release decisions
 

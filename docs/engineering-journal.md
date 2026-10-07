@@ -343,6 +343,57 @@ A SQLAlchemy flush can execute constraint-checked SQL before commit. Recovery mu
 - `tests/integration/test_idempotency.py`.
 - Existing sequential coverage: `tests/integration/test_workflow.py`.
 
+## Full-stack baseline: runtime recovered
+
+### Environment and acceptance checklist
+
+After host storage recovery, Docker readiness and storage inspection passed: Linux engine 29.8.2; C: free space = 6,181,007,360 bytes; G: free space = 104,745,066,496 bytes. The isolated `evalpulse-rework` stack then built and started successfully, including migrations and API/PostgreSQL/Redis readiness. Build parallelism was limited; no pruning, reset, volume deletion, or relocation was performed.
+
+Acceptance checks:
+
+- [x] Live HTTP mock evaluation through PostgreSQL, Redis, and the worker.
+- [x] Existing Playwright reviewer workflow against the isolated dashboard.
+- [x] Full Python suite on a separate `evalpulse_rework_test` PostgreSQL database.
+- [x] Complete build-context exclusion probe, including image export.
+
+All four runtime acceptance checks passed. Fresh repository checks also passed: Ruff lint/formatting (36 files), strict mypy (16 application/changed-test files), workspace lint/typing, all five client tests, all six audit-policy tests, and the production dependency audit with no vulnerabilities. The working baseline meets its acceptance criteria. No application changes were needed to recover the runtime baseline; only the temporary runner's fixture mounts/tracer selection changed. The application remains on ports 18000/13000, with Gemini disabled and a documented local placeholder session secret. Browser downloads were placed on G: rather than the space-constrained C: drive.
+
+Minor workflow mistake: a documentation update initially failed to parse because of a quoting typo; no files changed. Correcting the invocation applied the intended updates. This was not an application defect.
+
+### Live HTTP evidence
+
+`.venv\Scripts\python.exe scripts\smoke.py http://localhost:18000` passed. The public HTTP workflow submitted baseline and candidate runs and waited for actual asynchronous completion through the running stack. Baseline pass rate was 1.0, candidate pass rate 0.0; the persisted comparison rejected the regression. Output: `status=ok`, `decision=failed`. The failed release decision is the expected result, not a failed smoke test. This validates one local mock broker/worker workflow, not worker-loss recovery or exactly-once external calls.
+
+### Build-context and running-service evidence
+
+The BuildKit bind-mounted probe passed all exclusion assertions and completed image export/unpack to `evalpulse-rework-context-probe`. Root and nested private `.env*` files, `.pi`, and `.neon` were absent; `.env.example` remained available. This completes the earlier probe that had passed assertions but failed export during storage exhaustion. It verifies these context exclusions, not the absence of every possible secret or an image security scan.
+
+Compose inspection showed API/PostgreSQL/Redis healthy and web/worker running. Runtime versions: Python 3.12.10, Node 22.17.0, PostgreSQL 17.5, Redis 8.0.6. A read-only query of the application database `evalpulse` found six completed runs from the three workflows (HTTP, Playwright, and browser inspection), while the separate `_test` database was used for destructive test setup. A post-build capacity check reported C: free space = 6,349,979,648 bytes and G: free space = 103,979,749,376 bytes. No healthy filesystem under arbitrary load, crash recovery, or production readiness is inferred from these local checks.
+
+### PostgreSQL runner fixture correction
+
+The first isolated PostgreSQL run completed with 33 passing and three failing tests. All failures reported an empty RAG knowledge base: the runner mounted `python`, `tests`, and `pyproject.toml` into `/workspace` but omitted `docs`, which the retrieval/diagnostic tests use as runtime fixtures. This was a temporary verification-runner setup mistake, not a reproduced application or PostgreSQL defect. Mounted `docs` read-only and reran the full suite against the same dedicated `_test` database; all 36 tests passed at 82% coverage across 1,401 statements (55.86 seconds, Linux/Python 3.12.10). The runner used pytest 8.4.2, pytest-cov 6.3.0, httpx 0.28.1, and coverage 7.16.2.
+
+Coverage also warned that its native tracer could not map a shared object from the protected `/tmp` mount. The rerun selects `COVERAGE_CORE=pytrace`, preserving the container's read-only/non-executable temporary-storage protection rather than weakening it. The native-tracer warning disappeared on the corrected run. The first incomplete run's 75% coverage is not used as successful baseline evidence. The Starlette/httpx warning is distinct and remained the sole warning. This validates the controlled flush interleaving on PostgreSQL too; it does not prove every concurrent request/broker scenario.
+
+Lesson: mount fixture/data dependencies as well as source and tests when reproducing a host test environment in a hardened container. Keep failed harness attempts in the record rather than changing application behavior to accommodate absent fixtures.
+
+### Browser regression evidence
+
+The existing Playwright test `reviewer detects a prompt regression` passed: one test, 11.6 seconds; total runner time 20.8 seconds. It exercised login, project creation, immutable versions, dataset import, both asynchronous evaluations, and the failed release report against `http://localhost:13000`. Browser binaries and test output were directed into the uncommitted local verification directory on G:.
+
+```cmd
+set "PLAYWRIGHT_BROWSERS_PATH=%cd%\.pi\playwright-browsers"
+set "E2E_BASE_URL=http://localhost:13000"
+call node_modules\.bin\playwright.cmd test --config tests\e2e\playwright.config.ts --output .pi\verification\playwright-results
+```
+
+### Browser inspection evidence
+
+The full reviewer workflow also completed through the rendered dashboard: login, project creation, immutable prompt versions, three-case dataset import, both evaluations, and comparison. Both runs displayed `completed`; baseline pass rate was 100%, candidate pass rate 0%; the report displayed `Regression detected` and `FAIL`, with separate policy outcomes. Gemini remained unavailable. This is a local mock demonstration, not production performance evidence.
+
+A full-page screenshot was saved to `.pi/verification/full-stack-regression.png` (150,625 bytes); artifact metadata verified it existed. The inspection's browser session was closed after saving the screenshot. Local artifacts are not committed.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.
