@@ -64,6 +64,7 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgresql+psycopg://evalpulse:evalpulse@localhost:5432/evalpulse_test
+      TEST_DATABASE_URL: postgresql+psycopg://evalpulse:evalpulse@localhost:5432/evalpulse_test
       REDIS_URL: redis://localhost:6379/0
       SESSION_SECRET: integration-secret-longer-than-thirty-two-characters
     steps:
