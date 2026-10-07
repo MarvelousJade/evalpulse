@@ -4,7 +4,15 @@
 
 > A reviewer who is not a member of a private project can fetch its completed run metadata and case results if they know the run ID. The project owner can access the same data normally.
 
-This is an intentionally introduced local defect, not a production incident. The faulty checkpoint is pending verification; the starting correct baseline is `7d26f9b`. Use only the isolated synthetic users created by the regression; do not investigate real users or deployments.
+This is an intentionally introduced local defect, not a production incident. Faulty checkpoint: `learning/02-faulty`. Starting correct baseline: `7d26f9b`; verified scenario controls: `001c483`. Case 01 is already corrected at this checkpoint.
+
+Create a separate worktree from the repository root (use unused directory/branch names):
+
+```shell
+git worktree add -b study/case-02 "../evalpulse-case-02" learning/02-faulty
+```
+
+Use only the isolated synthetic users created by the regression; do not investigate real users or deployments.
 
 ## Reproduce
 

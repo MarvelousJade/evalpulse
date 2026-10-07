@@ -449,7 +449,6 @@ def authorized_run(db: Session, run_id: str, user: User) -> EvaluationRun:
     run = db.get(EvaluationRun, run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    authorize_project(db, run.project_id, user)
     return run
 
 

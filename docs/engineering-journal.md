@@ -414,6 +414,16 @@ Faulty checkpoint `79e46e9` is preserved by `learning/01-faulty`. The first inco
 
 The diagnosis, progressive hints, tradeoffs, and lesson are separate from learner instructions in `docs/debugging/solutions/01-critical-policy.md`. Fresh verification passed: both focused cases (7.51 seconds), all 40 SQLite tests at 82% coverage across 1,401 statements (146.39 seconds), Ruff lint/formatting (38 files), and strict mypy (18 application/test/helper files). The known Starlette/httpx warning remained. Preserve the separate correction as `learning/01-fixed`; fresh PostgreSQL/full-stack checks are still required for the final merged state. No dependency, schema, or policy change was needed. No production impact or performance improvement is claimed.
 
+## Case 02: intentional run-access checkpoint
+
+**Provenance:** intentionally introduced on `shaoyu/learning` after verified case 01 fix `3e366ce` (`learning/01-fixed`). The first case remains corrected; the only unresolved intentional fault is case 02. Neither fault was deployed or present in the working implementation branch.
+
+**Problem/reproduction:** the simulated report and controls in `docs/debugging/02-run-access.md` cover owner, nonmember, unknown-run, and legitimate viewer access to metadata/results. Run `python -m pytest tests/integration/test_run_authorization.py -v`. These controls passed on both databases before introducing the fault.
+
+**Intentional change and hypothesis:** omitted the project membership check from the shared `authorized_run` lookup while leaving authentication and missing-run handling intact. This models a plausible endpoint/helper refactoring mistake: an active identity is mistaken for permission to read a particular resource. Expect both nonmember route checks to return 200 rather than the established 404. Ruff lint/formatting (38 files) and strict application typing (15 files) passed. Both focused route regressions failed as intended in 6.25 seconds: the authenticated nonmember received 200 rather than 404 for metadata and results. Owner-access and login assertions succeeded before those failures; unknown-run/viewer controls had passed before introduction and will be rerun after correction. Preserve this deliberately non-deployable checkpoint as `learning/02-faulty`. The running Docker stack remains the correct baseline.
+
+Minor documentation mistake caught during staged review: the case 02 worktree example retained its safety warning on the closing code-fence line. Moved the warning into a separate paragraph before committing; fence checks passed for all three staged documents, alongside the scoped diff check. This was an uncommitted documentation-edit mistake, not the intentional authorization defect.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.
