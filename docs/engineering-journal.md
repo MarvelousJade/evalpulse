@@ -246,6 +246,46 @@ A fresh `docker info --format "{{.ServerVersion}}"` attempt timed out after 45 s
 
 The user renamed local `master` to `me`. Work continues on `shaoyu/rework`; remote branches are unchanged, and integration into `me` still requires authorization. Historical kickoff references to `master` describe the branch name at that time.
 
+## Investigation: caught temporary provider errors strand running runs
+
+### Expected behavior and reproduction
+
+An ordinary temporary provider error should permit the configured retry to continue, without re-evaluating committed cases. Static inspection found that execution commits `running`, then only rolls back the current transaction on a temporary error. Celery retries subsequently attempt a queued-only claim, so rollback alone cannot release the previously committed claim.
+
+Created deterministic tests with a provider that fails once before the first result or after one checkpoint. The first attempt is expected to raise the temporary error and release the run to queued; the next attempt should complete while retaining existing result/score IDs and the original start time. The pre-fix reproduction completed: both cases failed because the run remained `running` instead of `queued`. This confirms that rollback did not undo the previously committed claim:
+
+```shell
+.venv\Scripts\python.exe -m pytest tests/integration/test_retries.py -k temporary_errors_release -q
+```
+
+Additional acceptance tests cover the bound Celery task's three-retry budget using eager request contexts (no broker), a second-session delivery during an active provider call, cancellation between attempts, terminal redelivery, and a stranded running-row boundary. These are synthetic in-process checks, not a live-worker or PostgreSQL concurrency proof.
+
+### Root cause, correction, and tradeoffs
+
+Rollback only affects the current uncommitted transaction; the run's `running` claim was already committed. Retry scheduling and execution ownership were therefore inconsistent.
+
+The temporary-error handler now releases only the run whose current execution caught the error and remains running, commits a retry event, then rethrows for existing Celery backoff. The bound task passes retry eligibility into execution. On exhaustion, execution persists terminal failure before releasing ownership; releasing first would allow another claimant before failure is recorded. Queued-only claims, committed case checkpoints, and cancellation intent are preserved. The claim update uses `coalesce` so an existing start time is retained rather than reset at each attempt.
+
+The ownership assumption is explicit: only the successful queued-only claimant executes the run, and no external code forcibly resets its running state. After the retry-release commit, the old invocation performs no further run/result/event writes.
+
+This no-schema-change correction intentionally does not recover killed owners or close the database-release/broker-scheduling gap. General recovery would require explicit ownership/leases with fencing or an equivalent proven mechanism. A duplicate delivery after a legitimate release may claim queued work first; the atomic queued-only claim still selects one owner. The retry budget belongs to a Celery task chain, not a durable global per-run attempt counter across independent deliveries. Provider calls interrupted before checkpointing may repeat; no stronger cost or exactly-once guarantee is claimed.
+
+### Lesson and interview explanation
+
+Retries combine delivery scheduling with durable execution ownership. Rolling back the current case does not undo an earlier committed claim. Reproduce a transient failure before and after a checkpoint, release only the caught-error owner's claim, preserve completed work, and terminate exhausted attempts before allowing another owner. Explain the explicit limits: no generic reclamation, no exactly-once external calls, and no durable global attempt cap.
+
+### Runtime blocker investigation
+
+`docker context show` selected `desktop-linux`. `wsl --list --verbose` showed the `docker-desktop` distribution stopped, while the normal development distribution was running. This explains why Docker Desktop GUI processes being present did not prove a usable Linux backend. `docker desktop start` exited successfully but only reported “Docker Desktop is already running.” It did not establish a recovered engine, so no new readiness pass is claimed and the command is not repeated merely to wait. Starting the engine in the Desktop UI or an explicitly authorized restart is needed next. No restart/reset, container deletion, or volume removal was performed. Engine readiness still requires a real API response.
+
+### References and provenance
+
+- `python/evalpulse/engine.py`, `python/evalpulse/tasks.py`.
+- `tests/integration/test_retries.py`.
+- Previous comparison fix: `f6c6e99`.
+
+The two pre-fix reproductions failed at the expected state assertion. Post-fix verification passed on Windows/Python 3.12.10: Ruff lint, Ruff format check (35 files), strict mypy across 16 application/changed-test source files, all 9 focused retry tests, and the full suite (34 tests, 82% statement coverage across 1,401 statements, 191.06 seconds). Checkpoints and score IDs, original start time, cancellation intent, the task-chain retry budget, duplicate active delivery, and terminal/unreleased states passed their assertions. One Starlette/httpx deprecation warning remains. No live-broker, worker-kill, or PostgreSQL concurrency check ran. This is existing behavior reproduced during ordinary development, not an intentionally introduced defect or a production incident.
+
 ## Personal investigation notes
 
 Not yet provided. Record your own reproduction steps, hypotheses, findings, changes, verification, and reflections here or link separate study notes. Interview statements about personal work must be based on these notes rather than inferred from implementation records.

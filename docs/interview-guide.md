@@ -4,7 +4,7 @@
 
 **One sentence:** EvalPulse evaluates versioned prompts against a shared dataset and explains whether a candidate meets explicit regression gates.
 
-**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 25 tests at 81% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by the local Docker daemon, so those tests are not evidence of live queue delivery.”
+**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The latest verified in-process Python suite passed 34 tests at 82% statement coverage, and five typed client tests passed. Full-stack verification during rework is blocked by the local Docker daemon, so those tests are not evidence of live queue delivery.”
 
 **Three-minute walkthrough:**
 
@@ -87,15 +87,15 @@ These are engineering records to study, not claims about your own investigation.
 **Verification →** sentinel preservation and invalid-target regressions passed in the 21-test suite; changed-test typing passed.
 **Lesson →** destructive setup requires an explicit safety boundary. Commit: `902813e`.
 
-### 2. Restore a reproducible Windows verification environment
+### 2. Resume caught temporary failures without duplicating completed work
 
-**Problem →** lint could not find `eslint` or `tsc`.
-**Hypothesis →** the existing dependency installation lacked usable Windows command shims.
-**Evidence →** the commands failed before reinstall; `npm ci` restored them without a dependency-version change.
-**Decision/fix →** reinstall from the lockfile rather than misdiagnose application code.
-**Tradeoff →** installation time; no architecture change was justified.
-**Verification →** lint, typing, five client tests, and the Next.js 16.3.1 production build passed.
-**Lesson →** distinguish environment failures from behavioral bugs. No application defect or production incident was established.
+**Problem →** a temporary provider error left a run running, so a queued-only retry could not resume it.
+**Hypothesis →** rollback affected the case transaction, not the earlier committed execution claim.
+**Evidence →** failures before the first result and after one checkpoint both left the durable status running.
+**Decision/fix →** release the caught-error owner's claim before retry; preserve checkpoints and start time; persist terminal failure on task-chain exhaustion before releasing ownership.
+**Tradeoff →** the small correction does not provide leases, worker-loss recovery, exactly-once external calls, or a global per-run attempt cap.
+**Verification →** nine focused tests and the 34-test suite passed, including checkpoint/score identity, duplicate active delivery, cancellation, exhaustion, and terminal states.
+**Lesson →** delivery retries and durable execution ownership must agree; rollback is not a general undo operation. This was an existing defect reproduced during rework.
 
 ### 3. Preserve the asynchronous architecture without making unsupported reliability claims
 
@@ -148,7 +148,7 @@ Stop if readiness fails. A rendered Compose configuration does not prove that co
 
 Be able to explain immutable inputs, validation, authorization, transactions, idempotency, asynchronous delivery, deterministic tests, and explicit release policies without jargon.
 
-Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by the local Docker daemon. Comparison compatibility was reproduced and fixed. Static review still raises retry recovery, concurrent idempotency, and event sequencing concerns; those remain investigation candidates, not reproduced incidents.
+Current rework limitations: production dependency remediation and clean-install checks passed, but the full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain; PostgreSQL/Redis, container, HTTP smoke, and browser checks are blocked by the local Docker daemon. Comparison compatibility and caught temporary-provider retry recovery were reproduced and fixed. Worker-loss recovery and release-to-broker scheduling remain explicit limitations. Concurrent idempotency and event sequencing are still static investigation candidates, not reproduced incidents.
 
 For production or scale, verify recovery ownership and concurrent writes on PostgreSQL, bound metrics cardinality, justify thresholds with representative data, review authorization boundaries, and add operational recovery procedures. Do not claim production readiness from a local synthetic demo.
 
@@ -187,7 +187,7 @@ Isolated learning-branch exercises will be prepared after the working baseline i
 - **Stack:** Next.js/TypeScript, FastAPI/Pydantic, SQLAlchemy/PostgreSQL, Celery/Redis.
 - **Design:** durable authority in the database; optional model integration; reproducible mock-first tests.
 - **Strongest bug story:** destructive test setup inherited application storage; prove it with disposable sentinel data; isolate before engine initialization.
-- **Verified evidence:** 25 Python tests, 81% coverage, five client tests, lint, typing, build, and Compose rendering.
+- **Verified evidence:** 34 Python tests, 82% coverage, five client tests, lint, typing, build, and Compose rendering.
 - **Boundary:** direct-engine tests are not live-worker proof; historical results are not fresh verification.
 - **Outstanding work:** remaining development advisories, Docker-dependent baseline, targeted reliability investigations, and learning exercises.
 - **Personal reflection:** supply your completed investigation notes; do not memorize invented first-person experience.

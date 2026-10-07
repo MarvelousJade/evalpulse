@@ -56,7 +56,7 @@ The full audit still fails for five development package records propagated throu
 
 The full working baseline is not yet accepted. Do not introduce learning-branch defects or describe the entire rework as complete while runtime checks remain blocked. Reliability findings from static review require focused reproduction before selecting further code fixes. Main-branch integration and pushes remain unauthorized.
 
-## Next increment: comparable release decisions
+## Completed increment: comparable release decisions
 
 The release gate must compare the same immutable workload and scoring definitions. Acceptance criteria:
 
@@ -66,7 +66,21 @@ The release gate must compare the same immutable workload and scoring definition
 - Different prompt versions remain comparable when their dataset and evaluator definitions match.
 - Reproduce the current behavior with deterministic completed runs before changing the API, then rerun regressions and the existing workflow.
 
-Verification passed: 25 Python tests at 81% coverage, Ruff lint/formatting, and application/changed-test typing. The three rejection regressions and compatible control pass. This increment adds no tables, dependencies, or infrastructure. Exact matching is deliberately conservative; semantically equivalent dataset copies or reordered scoring definitions require a separately designed compatibility policy rather than implicit assumptions.
+Committed as `f6c6e99`. Verification passed: 25 Python tests at 81% coverage, Ruff lint/formatting, and application/changed-test typing. The three rejection regressions and compatible control pass. This increment adds no tables, dependencies, or infrastructure. Exact matching is deliberately conservative; semantically equivalent dataset copies or reordered scoring definitions require a separately designed compatibility policy rather than implicit assumptions.
+
+## Completed implementation: caught temporary-provider retry recovery
+
+Preserve queued-only execution claims. Acceptance criteria:
+
+- A caught temporary provider error releases the current owner's run back to queued before the retry is scheduled.
+- Retry skips committed results and scores, preserves the original start time, and completes the aggregate correctly.
+- The configured budget allows the initial attempt plus three retries; exhaustion persists one terminal failure before ownership is released.
+- Active duplicate deliveries do not claim running work; cancellation intent survives between attempts.
+- Completed, failed, cancelled, and unreleased running states remain unchanged on redelivery.
+
+Verification passed: nine focused retry tests, all 34 Python tests at 82% coverage, Ruff lint/formatting, and application/changed-test typing. The tests use direct execution and eager task contexts without a broker.
+
+This is not general worker-loss recovery. A killed owner can still strand a running row; release-to-broker scheduling also has a gap. Do not reclaim arbitrary running work or introduce leases/fencing without a separate design and evidence.
 
 ## Key reading path
 
@@ -78,7 +92,7 @@ Verification passed: 25 Python tests at 81% coverage, Ruff lint/formatting, and 
 6. `python/evalpulse/engine.py`: run claims, evaluation, persistence, and completion.
 7. `python/evalpulse/comparisons.py`: explicit release thresholds.
 
-Comparison compatibility was reproduced and fixed. Static review also identified retry-state, concurrent idempotency, and event-sequencing concerns. These remain investigation candidates, not reproduced failures or accepted scope for an unrestricted rewrite.
+Comparison compatibility and caught temporary-provider retry recovery were reproduced and fixed. Worker-loss recovery remains a documented limitation. Concurrent idempotency and event sequencing remain static investigation candidates, not reproduced failures or accepted scope for an unrestricted rewrite.
 
 ## Change and integration boundaries
 
