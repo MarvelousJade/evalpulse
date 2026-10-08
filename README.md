@@ -3,6 +3,7 @@
 **An interview portfolio project for evaluating prompts, detecting regressions, and explaining release decisions.**
 
 [Interview guide](docs/interview-guide.md) ·
+[Debugging investigations](docs/debugging/README.md) ·
 [Engineering journal](docs/engineering-journal.md) ·
 [Live demo](https://evalpulse-web.onrender.com) ·
 [Architecture](docs/architecture.md) ·

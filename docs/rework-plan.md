@@ -32,8 +32,8 @@ Retain the existing Next.js dashboard, FastAPI application, SQLAlchemy database 
 - [x] Select safe test storage as the first focused improvement, supported by a disposable reproduction.
 - [x] Implement baseline behaviors with acceptance criteria, relevant tests, journal evidence, and focused commits.
 - [x] Prepare `docs/interview-guide.md` with a demonstration, reading order, five factual stories, and a one-page summary; refresh it as evidence and personal study notes grow.
-- [ ] After verifying the baseline, prepare two or three isolated debugging exercises with learner instructions separated from solutions.
-- [ ] Fix and verify exercises, preserve checkpoints with a merge commit into `shaoyu/rework`, and verify the merged result.
+- [x] After verifying the baseline, prepare two isolated debugging exercises with learner instructions separated from solutions.
+- [x] Fix and verify exercises, preserve checkpoints with a merge commit into `shaoyu/rework`, and verify the merged result.
 
 The baseline is accepted only when required checks pass and the main workflow is demonstrated. Blocked checks must be reported rather than counted as passing. Existing historical verification is context, not fresh evidence.
 
@@ -54,7 +54,9 @@ The safe-storage increment is committed as `902813e`. Python verification passed
 
 Host storage/startup failures were overcome: Linux Docker 29.8.2 responds, the isolated stack built and started, migrations completed, and live HTTP, Playwright, rendered-browser inspection, and the build-context export probe passed. All 36 Python tests passed on disposable PostgreSQL at 82% coverage, matching the latest SQLite result. The initial PostgreSQL runner omitted documentation fixtures; its three failures were corrected by mounting them, without application changes. Fresh Ruff formatting/lint, strict mypy, workspace lint/typing, five client tests, six audit-policy tests, and the clean production audit also passed. The working baseline meets its acceptance criteria. See the journal and verification document for exact results and commands.
 
-Runtime acceptance criteria are met. Prepare two isolated learning exercises only from the verified checkpoint, preserve faulty and fixed commits, and integrate the corrected state into `shaoyu/rework`. Do not describe the entire rework as complete before exercises and merged-state checks are done. The last full audit still flagged five development package records through unpatched `braces`; worker-loss recovery and broad contention remain unverified. Reliability candidates require focused reproduction before further code fixes. Main-branch integration and pushes remain unauthorized.
+The two investigations were prepared from the verified checkpoint, reproduced, fixed in separate commits, and merged into `shaoyu/rework` as `50a70f9`, preserving the faulty/fixed history and tags. The application code remains equivalent to the accepted baseline; integration adds regression coverage and study material. Fresh merged checks passed: 40 tests on both SQLite/PostgreSQL at 82% coverage, Ruff, strict mypy, workspace lint/typing, five client tests, six audit-policy tests, production audit, container rebuild/readiness, and live HTTP/Playwright workflows. The agreed local portfolio/rework scope is complete.
+
+The refreshed full audit still flags five development records through unpatched `braces`; worker-loss recovery, broad contention/scale, and live model-quality evidence remain limitations, not claimed verification. Reliability candidates require focused reproduction before further code fixes. Personal investigation notes are for the user to supply. Main branch `me` integration and pushes remain unauthorized.
 
 ## Completed increment: comparable release decisions
 

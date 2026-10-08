@@ -28,7 +28,27 @@ In PowerShell, use `$env:TEST_DATABASE_URL = "postgresql+psycopg://localhost/eva
 
 Measured counts and performance claims belong here only after the commands have run in a clean environment. The local Kubernetes overlay is a demonstration path and is not described as production infrastructure.
 
-## Current runtime baseline
+## Final merged-state verification
+
+Corrected investigations were merged into `shaoyu/rework` as `50a70f9` (parents `7d26f9b`, `2bf8967`). The full branch diff was reviewed before merge; application code across `python`, `services`, `apps`, and `packages` matches the verified baseline. The integration adds regression coverage and study material, with both faulty/fixed pairs preserved in history and tags.
+
+Fresh checks after merge passed:
+
+- SQLite: 40 tests, 82% statement coverage across 1,401 statements, 145.69 seconds (Windows/Python 3.12.10).
+- Disposable PostgreSQL: 40 tests, same coverage, 59.70 seconds (Linux/Python 3.12.10).
+- Ruff lint/formatting (39 files including the local verification helper), strict mypy across 19 application/test/helper files, and workspace lint/typing.
+- Five client tests, six audit-policy tests, and production dependency audit with no vulnerabilities.
+- Isolated Compose rebuild/startup, migration completion, API/PostgreSQL/Redis readiness, and running web/worker.
+- Live HTTP smoke: asynchronous baseline/candidate completion and expected regression rejection (`status=ok`, `decision=failed`).
+- Playwright: one passing reviewer workflow, 6.7 seconds (total 8.3 seconds).
+
+The full `npm audit --json` still fails with five high-severity development records in the `braces` lint chain (GHSA-vfj7-8cjw-p6xm). No incompatible downgrade, unsupported override, or advisory exception was applied. The Starlette/httpx warning remains. Neither result is hidden by the passing production audit or functional checks.
+
+Start investigations at [learner instructions](debugging/README.md), not solution files or the journal. Faulty/fixed references: `learning/01-faulty` (`79e46e9`) / `learning/01-fixed` (`3e366ce`), and `learning/02-faulty` (`f2bbc8e`) / `learning/02-fixed` (`2bf8967`). No faulty implementation was deployed or merged as the working final state.
+
+These are local mock/controlled-interleaving results, not evidence of production usage, load, exploitation, external model quality, comprehensive authorization auditing, or general worker-loss/concurrent-delivery recovery. Kubernetes/production deployment checks were not part of this local acceptance scope. Nothing was pushed or merged into `me`; local verification artifacts and existing user changes are intentionally excluded from commits.
+
+## Verified runtime baseline before investigations
 
 After host storage recovery, Linux Docker 29.8.2 passed readiness/storage inspection. The isolated `evalpulse-rework` stack built and started, migrations completed, and API/PostgreSQL/Redis were healthy; web/worker were running. Runtime versions: Python 3.12.10, Node 22.17.0, PostgreSQL 17.5, Redis 8.0.6.
 

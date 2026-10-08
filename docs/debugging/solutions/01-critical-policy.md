@@ -18,7 +18,7 @@ The regression includes both mixed-tag scenarios and checks aggregate values plu
 
 ## Verification and tradeoffs
 
-The faulty checkpoint produced one failing positive scenario and one passing negative control. After correction, both focused cases passed (7.51 seconds), and all 40 SQLite tests passed at 82% coverage across 1,401 statements (146.39 seconds). Ruff lint/formatting (38 files) and strict mypy (18 application/test/helper files) passed. The sole warning was the known Starlette/httpx deprecation. The corrected merged state will receive a fresh PostgreSQL and full-stack refresh before completion.
+The faulty checkpoint produced one failing positive scenario and one passing negative control. After correction, both focused cases passed (7.51 seconds), and all 40 SQLite tests passed at 82% coverage across 1,401 statements (146.39 seconds). Ruff lint/formatting (38 files) and strict mypy (18 application/test/helper files) passed. The sole warning was the known Starlette/httpx deprecation. Merged state `50a70f9` subsequently passed fresh 40-test SQLite/PostgreSQL suites at 82% coverage, quality/client/audit-policy checks, production audit, container rebuild/readiness, and live HTTP/Playwright workflows. The full audit's five development findings remain; see the final verification record.
 
 No schema, dependency, or policy change is required. Preserve the established no-critical-case convention rather than changing product semantics during a bug fix. These tests do not establish production gate thresholds, external model quality, or performance.
 

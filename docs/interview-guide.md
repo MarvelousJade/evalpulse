@@ -4,7 +4,7 @@
 
 **One sentence:** EvalPulse evaluates versioned prompts against a shared dataset and explains whether a candidate meets explicit regression gates.
 
-**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The Python suite passed 36 tests at 82% statement coverage on both SQLite and disposable PostgreSQL. The containerized mock workflow also passed live HTTP and browser checks through Redis/Celery, alongside five typed client tests. These are local correctness results, not production reliability or model-quality evidence.”
+**60-second introduction:** “Prompt changes can look good on a few examples while breaking important cases. EvalPulse stores immutable prompt and dataset versions, runs both a baseline and a candidate, and compares their measured outcomes against release thresholds. The dashboard uses Next.js and TypeScript; FastAPI validates and authorizes requests; SQLAlchemy stores durable state; Celery and Redis execute background work. The default mock provider makes the demonstration reproducible without model credentials. The Python suite passed 40 tests at 82% statement coverage on both SQLite and disposable PostgreSQL. The containerized mock workflow also passed live HTTP and browser checks through Redis/Celery, alongside five typed client tests. These are local correctness results, not production reliability or model-quality evidence.”
 
 **Three-minute walkthrough:**
 
@@ -158,7 +158,7 @@ During rework, the isolated `evalpulse-rework` stack passed this workflow at `ht
 
 Be able to explain immutable inputs, validation, authorization, transactions, idempotency, asynchronous delivery, deterministic tests, and explicit release policies without jargon.
 
-Current limitations: production dependency remediation and clean-install checks passed, but the last full audit still flagged 5 high-severity development package records in the unpatched `braces` lint-tool chain. Host storage/startup failures were overcome; the containerized mock workflow and disposable PostgreSQL suite now pass. Worker-loss recovery, release-to-broker scheduling, broad concurrent-delivery behavior, live Gemini, and production scale remain unverified or explicitly limited. Comparison compatibility, caught temporary-provider retry recovery, and the controlled run-submission flush race were reproduced and fixed. Event sequencing remains a static investigation candidate, not a reproduced incident.
+Current limitations: production dependency remediation and clean-install checks passed, but the refreshed full audit still flags 5 high-severity development package records in the unpatched `braces` lint-tool chain. Host storage/startup failures were overcome; the containerized mock workflow and disposable PostgreSQL suite now pass. Worker-loss recovery, release-to-broker scheduling, broad concurrent-delivery behavior, live Gemini, and production scale remain unverified or explicitly limited. Comparison compatibility, caught temporary-provider retry recovery, and the controlled run-submission flush race were reproduced and fixed. Event sequencing remains a static investigation candidate, not a reproduced incident.
 
 For production or scale, verify recovery ownership and concurrent writes on PostgreSQL, bound metrics cardinality, justify thresholds with representative data, review authorization boundaries, and add operational recovery procedures. Do not claim production readiness from a local synthetic demo.
 
@@ -187,7 +187,7 @@ Next time, establish safe test configuration and evidence boundaries before runn
 5. Review decisions, evidence, and limitations.
 6. Practice explaining the project without notes.
 
-Isolated learning-branch exercises will be prepared after the working baseline is accepted. Their intentionally introduced defects must not be retold as defects that affected the implementation branch.
+Two isolated investigations are available in the [learner instructions](debugging/README.md), with preserved faulty worktrees and separate verified corrections. Start from symptoms; keep solution files, fix diffs, and the journal closed until you want the diagnosis. Their intentionally introduced defects must not be retold as defects that affected the implementation branch or as personal work you have not performed.
 
 ## One-page talking points
 
@@ -197,7 +197,7 @@ Isolated learning-branch exercises will be prepared after the working baseline i
 - **Stack:** Next.js/TypeScript, FastAPI/Pydantic, SQLAlchemy/PostgreSQL, Celery/Redis.
 - **Design:** durable authority in the database; optional model integration; reproducible mock-first tests.
 - **Strongest bug story:** destructive test setup inherited application storage; prove it with disposable sentinel data; isolate before engine initialization.
-- **Verified evidence:** 36 tests/82% coverage on SQLite and PostgreSQL; live HTTP and browser workflow; five client tests, lint, typing, container build/startup.
+- **Verified evidence:** 40 tests/82% coverage on SQLite and PostgreSQL; live HTTP and browser workflow; five client tests, lint, typing, container build/startup.
 - **Boundary:** direct-engine tests are not live-worker proof; historical results are not fresh verification.
-- **Outstanding work:** remaining development advisories, targeted reliability investigations, and learning exercises.
+- **Remaining limits:** development advisories, worker-loss recovery, broader concurrency/scale, and live model-quality evidence. Fresh merged-state checks passed; these limitations remain outside that evidence.
 - **Personal reflection:** supply your completed investigation notes; do not memorize invented first-person experience.
