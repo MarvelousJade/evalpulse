@@ -21,7 +21,11 @@ flowchart LR
 
 PostgreSQL stores all identity, version, run, result, comparison, and durable event records. Redis provides the Celery broker, ephemeral cancellation flags, cache entries, and live progress fan-out. Loss of Redis can delay active work but cannot remove a completed result.
 
-The API commits a queued run and dispatch record before attempting queue delivery. Workers atomically claim queued runs, upsert case results by `(run_id, test_case_id)`, and treat duplicate deliveries as no-ops. Server-Sent Events combine durable event replay with best-effort live progress.
+The API commits a queued run and dispatch record before attempting queue delivery. Workers atomically claim queued runs, reuse committed case results identified by `(run_id, test_case_id)`, and do not claim active or terminal runs on duplicate delivery. Server-Sent Events combine durable event replay with best-effort live progress.
+
+On a caught temporary provider error, the current execution releases its claim to queued before Celery retries; completed case results and the original start time survive. The task's retry budget is passed into execution so exhaustion persists a terminal failure before releasing ownership. This is not general worker-crash recovery; see [failure recovery](operations.md#failure-recovery) for ownership and broker-scheduling limitations.
+
+Release comparisons require completed runs in the selected project with the same immutable dataset version and identical evaluator definitions, including options. Different prompt versions may be compared, but changed workloads or scoring rules are rejected before a decision is persisted. Equality is deliberately conservative: dataset copies and reordered evaluator lists are not assumed equivalent.
 
 The default provider is deterministic: its output is derived only from immutable prompt text, case input, and provider configuration. This keeps development and CI reproducible and free. A live `gemini` provider uses the same normalized provider interface, while its model, endpoint, timeout, input size, output tokens, per-run cases, and daily allowance are controlled only by server settings.
 

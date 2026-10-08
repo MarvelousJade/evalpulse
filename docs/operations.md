@@ -38,6 +38,8 @@ replacement for an account-level cap.
 ## Failure recovery
 
 - If Redis restarts, completed data remains in PostgreSQL. Re-submit undispatched rows with the dispatcher command.
-- A worker crash leaves a run retryable; duplicate task delivery is safe.
-- Cancellation is cooperative and is observed between provider calls.
-- `/health/live` reports process health. `/health/ready` also checks required dependencies.
+- A caught temporary provider error releases the current execution claim to `queued` before Celery's backoff retry. Previously committed case results are retained. Each Celery task retry chain permits an initial attempt plus three retries; exhaustion persists a terminal failed run. This is not a durable global per-run attempt cap across independent duplicate deliveries.
+- Duplicate deliveries do not claim active `running` or terminal runs. A delivery after an explicit retry release may claim queued work before the scheduled retry; the queued-only update still selects one owner.
+- A worker crash after claiming can strand a `running` run. Broker redelivery alone does not repair database ownership. There is also a gap between committing a retry release and scheduling it in the broker. Neither limitation is solved by result uniqueness; general recovery needs an ownership/fencing or equivalent design. Do not reset active runs without establishing that their owner is no longer executing.
+- Cancellation is cooperative and is observed between provider calls; cancellation intent persists across caught-error retries.
+- `/health/live` reports process health. `/health/ready` checks database access, not broker or worker readiness.

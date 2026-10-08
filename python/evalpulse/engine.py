@@ -36,13 +36,18 @@ def execute_run(
     run_id: str,
     publish: ProgressPublisher | None = None,
     is_cancelled: CancellationCheck | None = None,
+    *,
+    retry_allowed: bool = True,
 ) -> str:
     claimed = cast(
         CursorResult[Any],
         db.execute(
             update(EvaluationRun)
             .where(EvaluationRun.id == run_id, EvaluationRun.status == "queued")
-            .values(status="running", started_at=datetime.now(UTC))
+            .values(
+                status="running",
+                started_at=func.coalesce(EvaluationRun.started_at, datetime.now(UTC)),
+            )
         ),
     )
     if claimed.rowcount != 1:
@@ -131,6 +136,17 @@ def execute_run(
             _publish(publish, run.id, {"type": "run.progress", **progress})
     except TemporaryProviderError:
         db.rollback()
+        run = db.get(EvaluationRun, run_id)
+        if run is None:
+            return "missing"
+        if run.status != "running":
+            return run.status
+        if not retry_allowed:
+            _fail_run(db, run, "Provider retry budget exhausted")
+            return "failed"
+        run.status = "queued"
+        add_event(db, run.id, "run.retrying", {"status": "queued"})
+        db.commit()
         raise
     except Exception as exc:
         db.rollback()

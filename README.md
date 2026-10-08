@@ -1,7 +1,10 @@
 # EvalPulse
 
-**A production-minded platform for evaluating prompts, catching regressions, and diagnosing failures.**
+**An interview portfolio project for evaluating prompts, detecting regressions, and explaining release decisions.**
 
+[Interview guide](docs/interview-guide.md) ·
+[Debugging investigations](docs/debugging/README.md) ·
+[Engineering journal](docs/engineering-journal.md) ·
 [Live demo](https://evalpulse-web.onrender.com) ·
 [Architecture](docs/architecture.md) ·
 [AI design](docs/ai-integration.md) ·
@@ -42,8 +45,9 @@ flowchart LR
 ```
 
 PostgreSQL is authoritative; Redis stores only replaceable queue, cache, cancellation, and progress
-state. Each result is persisted before progress is published, making worker retries safe. Diagnostic
-tools are bound to the authenticated run, so model-supplied IDs cannot widen access.
+state. Results are persisted before progress is published. That checkpointing does not by itself prove
+interrupted-run recovery or concurrent delivery safety; see the [verification boundaries](docs/verification.md).
+Diagnostic tools are bound to the authenticated run, so model-supplied IDs cannot widen access.
 
 ## Built with
 

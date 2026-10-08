@@ -418,13 +418,15 @@ def create_run(
         provider_config=body.provider_config,
         evaluators=[spec.model_dump(mode="json") for spec in body.evaluators],
     )
-    db.add(run)
-    db.flush()
-    db.add(RunDispatch(run_id=run.id))
-    db.add(
-        RunEvent(run_id=run.id, sequence=1, event_type="run.queued", payload={"status": "queued"})
-    )
     try:
+        db.add(run)
+        db.flush()
+        db.add(RunDispatch(run_id=run.id))
+        db.add(
+            RunEvent(
+                run_id=run.id, sequence=1, event_type="run.queued", payload={"status": "queued"}
+            )
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -622,6 +624,10 @@ def create_comparison(
         raise HTTPException(status_code=422, detail="Runs must belong to the selected project")
     if baseline.status != "completed" or candidate.status != "completed":
         raise HTTPException(status_code=409, detail="Both runs must be completed")
+    if baseline.dataset_version_id != candidate.dataset_version_id:
+        raise HTTPException(status_code=422, detail="Runs must use the same dataset version")
+    if baseline.evaluators != candidate.evaluators:
+        raise HTTPException(status_code=422, detail="Runs must use the same evaluator definitions")
     passed, checks = compare_aggregates(baseline.aggregate, candidate.aggregate, body.policy)
     comparison = Comparison(
         project_id=project_id,

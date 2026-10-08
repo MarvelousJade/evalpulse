@@ -1,7 +1,7 @@
 import json
 from contextlib import suppress
 
-from celery import Celery
+from celery import Celery, Task
 from redis import Redis
 
 from .config import get_settings
@@ -52,9 +52,15 @@ def cancellation_requested(run_id: str) -> bool:
     retry_jitter=True,
     max_retries=3,
 )  # type: ignore[untyped-decorator]
-def evaluate_run_task(self: object, run_id: str) -> str:
+def evaluate_run_task(self: Task, run_id: str) -> str:
     with SessionLocal() as db:
-        return execute_run(db, run_id, publish_progress, cancellation_requested)
+        return execute_run(
+            db,
+            run_id,
+            publish_progress,
+            cancellation_requested,
+            retry_allowed=self.request.retries < self.max_retries,
+        )
 
 
 def dispatch_pending(limit: int = 100) -> int:

@@ -1,5 +1,9 @@
 .git
 .github
+**/.env*
+!**/.env.example
+.pi
+.neon
 .venv
 **/__pycache__
 **/.pytest_cache

@@ -33,6 +33,7 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - run: node --test scripts/audit-production.test.mjs
       - run: node scripts/audit-production.mjs
       - run: npm run lint
       - run: npm run typecheck
@@ -64,6 +65,7 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgresql+psycopg://evalpulse:evalpulse@localhost:5432/evalpulse_test
+      TEST_DATABASE_URL: postgresql+psycopg://evalpulse:evalpulse@localhost:5432/evalpulse_test
       REDIS_URL: redis://localhost:6379/0
       SESSION_SECRET: integration-secret-longer-than-thirty-two-characters
     steps:
