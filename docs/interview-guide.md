@@ -127,6 +127,12 @@ These are engineering records to review, not claims about your own investigation
 **Verification →** the winner case and unrelated-error control passed with one run/dispatch/event or no partial records, respectively; all 36 tests, formatting, lint, and typing passed.
 **Lesson →** handle errors where SQL executes, not only where transactions commit. This is an existing defect reproduced during rework, not a production incident.
 
+## Measured resume evidence
+
+See [resume evidence](resume-evidence.md) for supported bullets and the [benchmark procedure](benchmarks/README.md) for reproduction. On 2026-10-25 UTC, five local direct-engine SQLite trials evaluated 50 mock cases in a median 0.661 seconds (range 0.638–0.723). A separate injected temporary-error experiment preserved 25 result IDs and 25 score IDs, completed 50 results, and made 51 provider calls with no completed-case recalls. The refreshed Python suite passed 43 tests at 82% statement coverage; the opt-in benchmark was separately verified and skipped in the ordinary suite.
+
+Explain timing boundaries before quoting throughput. These measurements establish existing local behavior, not a speedup, sustained load, live Celery throughput, live-model quality, customer savings, or worker-loss recovery. Historical PostgreSQL/full-stack results above were not rerun for this measurement increment.
+
 ## Demonstration script
 
 ### Verified in-process demonstration

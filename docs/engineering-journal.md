@@ -6,6 +6,109 @@ Record observations separately from hypotheses and hypothetical consequences. Lo
 
 Implementation records below do not establish what the project owner personally investigated or learned. Personal investigation notes have a separate section for the owner to complete. Intentionally introduced defects must be explicitly identified and must not be attributed to the implementation branch.
 
+## Resume measurement increment — 2026-10-25 UTC
+
+### Purpose, acceptance, and scope
+
+The request was to collect defensible quantifiable results and document resume claims. EvalPulse
+helps developers compare prompt versions using stable datasets and release criteria. This increment
+measures existing behavior rather than changing the runtime or manufacturing a performance gain.
+Acceptance assertions require six distinct 50-case runs (one warm-up plus five measured trials),
+complete passing results, and a recovery experiment preserving 25 result and score identities with
+51 provider calls for 50 final results. There is deliberately no speed threshold.
+
+Git status was clean at `af69de0` on `main`. Inspected README, architecture/workflow guidance,
+verification history, recent Git history, engine, configuration, fixtures, and workflow/retry tests.
+No `shaoyu/rework` branch existed locally, so created it from the current baseline. Existing debugging
+checkpoint/fix history was already integrated; no additional intentionally broken implementations
+were needed for this measurement-only scope.
+
+### Engineering hurdle: restoring an executable verification environment
+
+**Observed problem/reproduction:** `.venv/Scripts/python.exe --version` failed because its recorded
+base executable `C:\\Python312\\python.exe` no longer existed. `python --version` reached only a Windows
+Store alias; `py` and Docker were unavailable on PATH. Searching installed-program locations found
+no usable Python. This is a local environment failure, not an application defect.
+
+**Attempts/evidence:** downloaded uv into ignored `.pi/tools`. PowerShell `Expand-Archive` failed to
+load its module; Git Bash `unzip` successfully extracted the archive. `uv python install 3.12`
+installed Python 3.12.15. Created `.pi/measure-venv` and installed `.[dev]` without touching the
+existing `.venv`. The package installer fell back from hardlinks to copying across filesystems;
+installation completed successfully.
+
+**Typing hurdle:** passing script paths and tests importing `scripts.measure_resume` to mypy first
+produced duplicate module identities (`measure_resume` versus `scripts.measure_resume`). Adding
+`--explicit-package-bases` while retaining the application directory target produced
+`python.evalpulse.database` versus `evalpulse.database`. Selecting modules consistently and setting
+`MYPYPATH=python` resolved both without adding empty package files or changing runtime imports.
+
+**Decision/tradeoffs:** use an isolated disposable environment rather than repairing the user's old
+one. Dependencies were resolved from existing ranges, not the historical environment; the report
+records key versions, but not a full transitive lock or RAM/background load. This is repeatable
+procedure evidence, not a bit-for-bit hardware benchmark. No application defect or credential
+compromise was observed during this increment.
+
+### Measurement design and evidence
+
+- `scripts/measure_resume.py` clears destructive PostgreSQL opt-in and live-model settings, invokes
+  the opt-in benchmark with existing disposable database fixtures, and publishes JSON only on success.
+- The report records base revision, dirty status, source hashes, environment, raw trial durations,
+  provider-call counts, and pytest output. Existing evidence cannot be overwritten.
+- Extended the existing mock-run helper with an optional idempotency key. Otherwise repeated trials
+  could accidentally reuse the same completed run. The benchmark explicitly checks distinct run IDs;
+  this was prevented during design, not encountered as a misleading measured result.
+- Timing covers only direct `execute_run`, including persistence and aggregation, not HTTP setup.
+  One excluded warm-up and five short runs establish an absolute baseline.
+- The temporary exception is an intentional test stimulus in a mock provider, not an intentionally
+  introduced application defect. Existing correct recovery behavior is being verified, not repaired.
+
+**Observed result:** 50 mock cases in median 0.661336 seconds, range 0.638399–0.723325 seconds.
+Derived median rate: 4,536 cases/minute, not an observed sustained one-minute load test. Recovery
+preserved 25 result IDs and 25 score IDs, completed 50 passing results, and made 51 provider calls;
+completed checkpoint cases each had exactly one call. No before/after performance, real-model
+quality, dollar savings, or customer impact was measured.
+
+### Verification
+
+Using `.pi/measure-venv/Scripts/python.exe` as `python`:
+
+```shell
+python scripts/measure_resume.py --output docs/benchmarks/local-mock-evidence.json
+python -m pytest tests/unit/test_resume_measurement.py -v
+python -m pytest --cov=evalpulse --cov-report=term-missing
+python -m ruff check python tests scripts
+python -m ruff format --check python tests scripts
+MYPYPATH=python python -m mypy --explicit-package-bases -p evalpulse -m scripts.measure_resume -m tests.helpers -m tests.benchmarks.test_resume_evidence -m tests.unit.test_resume_measurement
+```
+
+Benchmark: one passed in 9.53 seconds. Three runner-safeguard tests passed. Final ordinary suite:
+43 passed, one opt-in benchmark skipped, 82% statement coverage across 1,401 application statements,
+48.30 seconds. One known Starlette/httpx deprecation warning remains. Strict typing passed across
+19 source files; lint and formatting passed. The benchmark artifact predates the three new runner
+unit tests; its source manifest accurately records the files present when it ran. Measured engine,
+helper, runner, and benchmark hashes match the final implementation.
+
+No frontend code changed and no frontend checks were rerun. Docker, PostgreSQL, browser execution,
+worker termination, concurrent delivery, sustained load, and live models were not verified here.
+
+### Lesson, references, and interview explanation
+
+Use absolute measurements when there is no fair baseline. Validate record identity and provider
+calls, not just successful terminal status. Explicitly separate short local orchestration timings
+from sustained throughput and production reliability. Future work should measure a live worker and
+PostgreSQL before making claims about the deployed asynchronous system.
+
+References: `docs/resume-evidence.md`, `docs/benchmarks/README.md`,
+`docs/benchmarks/local-mock-evidence.json`, `docs/benchmarks/python-checks.txt`,
+`scripts/measure_resume.py`, `tests/benchmarks/test_resume_evidence.py`,
+`tests/unit/test_resume_measurement.py`, `tests/helpers.py`. Provenance: measurement tooling and local
+environment hurdles in this increment; no runtime fix. Personal investigation notes remain separate.
+
+Concise explanation: “I defined claims and acceptance checks first, timed fixed mock workloads,
+then injected a temporary error to verify that completed database records were reused. The results
+support local performance and checkpoint-preservation claims, not production scale or crash recovery.”
+Adapt first-person wording only to personal work actually completed.
+
 ## Rework kickoff
 
 ### Problem and constraints

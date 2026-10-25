@@ -1,5 +1,26 @@
 # Verification
 
+## Resume measurement refresh — 2026-10-25 UTC
+
+The local measurement harness passed independently: five 50-case mock runs had median direct-engine
+execution of 0.661 seconds (0.638–0.723 seconds), and a temporary-error retry preserved 25 result and
+25 score identities before completing 50 cases in 51 provider calls. See the
+[procedure](benchmarks/README.md), [raw JSON](benchmarks/local-mock-evidence.json), and
+[resume claims](resume-evidence.md).
+
+Python 3.12.15 on Windows 11: 43 tests passed, one opt-in benchmark skipped, one Starlette/httpx
+deprecation warning; 82% statement coverage across 1,401 application statements. Full output is in
+[python-checks.txt](benchmarks/python-checks.txt). Ruff lint and formatting passed, as did strict mypy
+across the application and changed scripts/tests (19 source files). This refresh used disposable
+SQLite, not PostgreSQL or a live broker. No frontend code changed; frontend/build/browser checks
+were not rerun. Earlier full-stack evidence below is historical, not refreshed by this increment.
+
+The repository's old `.venv` could not find its base Python. A separate ignored `.pi/measure-venv`
+was provisioned for this verification. The existing environment and application databases were not
+modified. See the journal for failed setup commands and resolution.
+
+## Standard checks
+
 Run the checks from the repository root:
 
 ```shell
