@@ -6,6 +6,86 @@ Record observations separately from hypotheses and hypothetical consequences. Lo
 
 Implementation records below do not establish what the project owner personally investigated or learned. Personal investigation notes have a separate section for the owner to complete. Intentionally introduced defects must be explicitly identified and must not be attributed to the implementation branch.
 
+## Restore the production dependency audit after new Next.js advisories
+
+### Problem and reproduction
+
+GitHub CI run `40240837113` at merged revision `714f625` failed `web-check` at
+`node scripts/audit-production.mjs`. Public job metadata confirms `npm ci` and all six audit-policy
+tests passed, while lint, typing, client tests, and build were skipped. Python and PostgreSQL jobs
+succeeded. Compose/container jobs were blocked by their dependency on `web-check`; the Kubernetes
+job is also restricted to manual workflow dispatch.
+
+Locally, `node scripts/audit-production.mjs` exited 1 for pinned Next.js 16.4.0. The live registry
+report listed GHSA-2464-fhr4-w9xw (critical image optimization issue), GHSA-p3m5-59mp-jv5r (high
+Server Actions denial of service), and GHSA-673q-mjm6-r5xr (critical typed-array cache issue).
+This is an audit finding, not demonstrated exploitability or evidence of compromise.
+
+### Investigation and root cause
+
+`gh run list` could not authenticate, so used unauthenticated public GitHub Actions REST metadata
+to identify the exact failing step, then reproduced that command locally. No private credentials
+were read or needed. The audit test suite passed before remediation, narrowing the failure to the
+installed package/advisory data rather than policy logic or the new Python benchmark.
+
+Next.js 16.4.0 was pinned in both root and web manifests. New audit data classified that version as
+vulnerable; earlier clean audit results were point-in-time observations, not lasting guarantees.
+`npm view next@16.4.3 version engines --json` and the matching ESLint config query confirmed the
+patch exists and supports the local Node version. No claim is made that the resume measurement
+changes introduced these vulnerabilities.
+
+### Fix, alternatives, and tradeoffs
+
+Aligned both Next.js pins and `eslint-config-next` at 16.4.3, and refreshed the lockfile with
+`npm install --ignore-scripts`. The refresh changed eight packages. Kept the production audit and
+its tests unchanged. A patch update is smaller than a framework migration; an audit exception,
+disabling the gate, or a forced automated major update would not be justified.
+
+The full audit now reports three development package records (two moderate, one high):
+`@vitest/mocker`, `vitest`, and `zod`. These are not production dependency findings and remain outside
+this focused runtime patch. Do not describe the full dependency audit as clean. No exploit,
+customer impact, or credential compromise was observed.
+
+### Verification and evidence
+
+Windows, Node 22.23.3, npm 12.2.0:
+
+```shell
+npm ci
+node --test scripts/audit-production.test.mjs
+node scripts/audit-production.mjs
+npm run lint
+npm run typecheck
+npm test --workspace @evalpulse/api-client
+npm run build
+npm audit --json
+```
+
+Clean install passed; six audit-policy tests passed; production audit passed with zero
+vulnerabilities; workspace lint and typing passed; five client tests passed; the optimized Next.js
+16.4.3 webpack build and client build passed. The full audit exited 1 with the three development
+records above. npm warned that ESLint 9.39.5 is unsupported and that local npm 12 blocked the
+`unrs-resolver` postinstall under its allowScripts policy; lint and build nevertheless completed.
+No runtime code or Python code changed; no Python, Docker, browser, or live deployment checks were
+rerun. Hosted CI success still requires a fresh run of this commit.
+
+### Lesson, provenance, and interview explanation
+
+An unchanged lockfile can fail an audit when advisory data changes. Reproduce the failing job step,
+patch the affected dependency without bypassing policy, and distinguish dependency findings from
+confirmed exploitation. The existing audit-policy regression tests and real pre/post audit command
+provide the relevant failure/pass evidence; no artificial application regression was added.
+
+References: `.github/workflows/ci.yml`, `scripts/audit-production.mjs`,
+`scripts/audit-production.test.mjs`, root/web package manifests, and `package-lock.json`.
+Provenance: newly reported dependency vulnerabilities in an existing pin, not an intentionally
+introduced defect or a production incident. Personal investigation notes remain separate.
+
+Concise explanation: “CI's security gate rejected the installed framework after new advisories.
+Job metadata and a local reproduction isolated the failure. A compatible patch and matching lint
+config restored the production audit without weakening it; local web checks passed, with separate
+development advisories still disclosed.”
+
 ## Resume measurement increment — 2026-10-25 UTC
 
 ### Purpose, acceptance, and scope

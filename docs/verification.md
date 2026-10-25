@@ -1,5 +1,23 @@
 # Verification
 
+## Next.js audit remediation
+
+CI run `40240837113` failed the production dependency audit for Next.js 16.4.0; lint, typing,
+client tests, and build did not run in that failed job. Locally reproduced the audit rejection,
+updated both Next.js pins and `eslint-config-next` to 16.4.3, and refreshed the lockfile without
+changing audit policy.
+
+On Windows/Node 22.23.3/npm 12.2.0, the complete local `web-check` sequence passed: `npm ci`, six
+audit-policy tests, production audit (zero vulnerabilities), workspace lint, workspace typing,
+five client tests, and optimized production/client builds. A separate full audit still fails with
+three development package records: two moderate (`@vitest/mocker`, `vitest`) and one high (`zod`).
+This is not a clean full audit. ESLint's unsupported-version warning remains. Local npm blocked
+`unrs-resolver` postinstall under its allowScripts policy; lint and build still passed.
+
+This is local verification, not a successful hosted CI run or a verified deployment. No Python,
+Docker, browser, or live model checks were rerun for this dependency-only fix. Earlier audit counts
+below are historical observations; advisory data can change without a source change.
+
 ## Resume measurement refresh — 2026-10-25 UTC
 
 The local measurement harness passed independently: five 50-case mock runs had median direct-engine
