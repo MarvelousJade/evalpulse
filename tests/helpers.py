@@ -20,6 +20,7 @@ def create_mock_run(
     cases: list[dict[str, Any]],
     *,
     prompt_text: str = "Return response",
+    idempotency_key: str = "additional-regression-run",
 ) -> dict[str, Any]:
     project = post(client, "/api/projects", {"name": "Regression verification"}, headers)
     prompt = post(
@@ -45,5 +46,5 @@ def create_mock_run(
             "provider_config": {},
             "evaluators": [{"type": "exact_match", "options": {}}],
         },
-        {**headers, "Idempotency-Key": "additional-regression-run"},
+        {**headers, "Idempotency-Key": idempotency_key},
     )
